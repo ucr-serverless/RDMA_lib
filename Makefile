@@ -15,7 +15,7 @@ endif
 
 
 CC=clang
-CFLAGS += -Wall -Werror -Wno-string-conversion -O0 -g -DDEBUG
+CFLAGS += -Wall -Werror -Wno-string-conversion -O3
 INCLUDES = -I./ -I./test/unity -I./perf
 LDFLAGS += -libverbs
 LIBS=-pthread
@@ -44,7 +44,7 @@ PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 
-all: $(PROG) $(TEST_EXEC)
+all: clean $(PROG) $(TEST_EXEC)
 
 bear: clean
 	@if command -v bear >/dev/null ; then \
@@ -53,9 +53,9 @@ bear: clean
 	else \
 		echo "Bear is not installed, skipping generation of compile_commands.json"; \
 	fi
-debug: CFLAGS := -g -DDEBUG
-debug: clean
-	make all
+
+debug: CFLAGS := -Wall -Werror -Wno-string-conversion -O0 -g -DDEBUG
+debug: clean all
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
