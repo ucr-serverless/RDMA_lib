@@ -14,13 +14,11 @@ CFLAGS += -DUSE_RTE_MEMPOOL
 endif
 
 
-CC=clang
-CFLAGS += -Wall -Werror -Wno-string-conversion -O3
+CFLAGS += -Wall -Werror  -O3
 INCLUDES = -I./ -I./test/unity -I./perf
 LDFLAGS += -libverbs
 LIBS=-pthread
 
-# SRCS=main.c client.c config.c ib.c server.c setup_ib.c sock.c
 
 TEST_DIR=test
 PERF_DIR=perf
@@ -46,17 +44,6 @@ TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 all: clean $(PROG) $(TEST_EXEC)
 
-bear: clean
-	@if command -v bear >/dev/null ; then \
-		echo "Bear is installed, generating compile_commands.json"; \
-		bear -- make debug; \
-	else \
-		echo "Bear is not installed, skipping generation of compile_commands.json"; \
-	fi
-
-debug: CFLAGS := -Wall -Werror -Wno-string-conversion -O0 -g -DDEBUG
-debug: clean all
-
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
@@ -73,9 +60,20 @@ $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS) $(LIBS) $(LDLIBS)
 
 
-.PHONY: clean format
+.PHONY: clean format bear debug
 clean:
 	$(RM) *.o $(TEST_DIR)/*.o $(UNITY_DIR)/*.o $(PERF_DIR)/*.o $(EXAMPLE_DIR)/*.o *~ $(BIN_DIR)/* compile_commands.json *.log
 
 format:
 	@ clang-format -i $(TEST_DIR)/*.c  $(PERF_FILES) $(PERF_DIR)/*.h $(SRC_FILES) *.h $(EXAMPLE_FILES)
+
+bear:
+	@if command -v bear >/dev/null ; then \
+		echo "Bear is installed, generating compile_commands.json"; \
+		bear -- make debug; \
+	else \
+		echo "Bear is not installed, skipping generation of compile_commands.json"; \
+	fi
+
+debug: CFLAGS := -Wall -Werror -Wno-string-conversion -O0 -g -DDEBUG
+debug: clean all
