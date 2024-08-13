@@ -1,0 +1,438 @@
+#include <arpa/inet.h>
+#include <assert.h>
+#include <infiniband/verbs.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "config.h"
+#include "debug.h"
+#include "ib.h"
+#include "mr.h"
+#include "qp.h"
+#include "sock.h"
+#include "utils.h"
+
+int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
+{
+    int num_of_device;
+    struct ibv_device **dev_list;
+
+    dev_list = ibv_get_device_list(&num_of_device);
+
+    if (unlikely(num_of_device <= 0))
+    {
+        log_error(" Did not detect devices \n");
+        log_error(" If device exists, check if driver is up\n");
+        goto error;
+    }
+    assert(params->device_idx);
+    ctx->device = dev_list[params->device_idx];
+    if (unlikely(!(ctx->device)))
+    {
+        log_error("Can not open device %d", params->device_idx);
+        goto error;
+    }
+
+    ctx->context = ibv_open_device(ctx->device);
+
+    if (unlikely(!(ctx->context)))
+    {
+        log_error("Couldn't get context for the device\n");
+        goto error;
+    }
+
+    ctx->device_idx = params->device_idx;
+
+    ctx->pd = ibv_alloc_pd(ctx->context);
+
+    if (unlikely(!(ctx->pd)))
+    {
+        log_error("Couldn't open protecttion domain\n");
+        goto error;
+    }
+
+    if (unlikely(ibv_query_device(ctx->context, &(ctx->device_attr))))
+    {
+        log_error("Error, ibv_query_device");
+        goto error;
+    }
+
+    if (unlikely(ibv_query_port(ctx->context, params->ib_port, &ctx->port_attr)))
+    {
+        log_error("Error, ibv_query_port");
+        goto error;
+    }
+
+    ctx->lid = ctx->port_attr.lid;
+    ctx->ib_port = params->ib_port;
+
+    if (unlikely(ibv_query_gid(ctx->context, params->ib_port, params->sgid_idx, &ctx->gid)))
+    {
+        log_error("Error, ibv_query_gid");
+        goto error;
+    }
+
+    ctx->sgid_idx = params->sgid_idx;
+
+    ctx->send_channel = ibv_create_comp_channel(ctx->context);
+    if (unlikely(!(ctx->send_channel)))
+    {
+        log_error("Error, ibv_create_comp_channel() failed\n");
+        goto error;
+    }
+    ctx->send_cq = ibv_create_cq(ctx->context, ctx->device_attr.max_cqe - 1, NULL, ctx->send_channel, 0);
+    if (unlikely(!(ctx->send_cq)))
+    {
+        log_error("Error, ibv_create_qp() send completion queue failed\n");
+        goto error;
+    }
+
+    ctx->send_cqe = ctx->send_cq->cqe;
+
+    ctx->recv_cq = ibv_create_cq(ctx->context, ctx->device_attr.max_cqe - 1, NULL, NULL, 0);
+    if (unlikely(!(ctx->recv_cq)))
+    {
+        log_error("Error, ibv_create_qp() receive completion queue failed\n");
+        goto error;
+    }
+
+    ctx->recv_cqe = ctx->recv_cq->cqe;
+
+    struct ibv_srq_init_attr attr = {.attr = {/* when using sreq, rx_depth sets the max_wr */
+                                              .max_wr = ctx->device_attr.max_srq_wr - 1,
+                                              .max_sge = 1}};
+
+    ctx->srq = ibv_create_srq(ctx->pd, &attr);
+    if (unlikely(!(ctx->srq)))
+    {
+        log_error("Error, ibv_cratee_srq() failed\n");
+        goto error;
+    }
+
+    if (unlikely(init_multiple_rc_qp_srq_unsignaled(ctx, params) == FAILURE))
+    {
+        log_error("Error, init multiple qps\n");
+        goto error;
+    }
+
+    if (unlikely(register_multiple_mr(ctx, params, buffers) == FAILURE))
+    {
+        log_error("Error, register mrs\n");
+        goto error;
+    }
+
+    ibv_free_device_list(dev_list);
+    return 0;
+error:
+    ibv_free_device_list(dev_list);
+    destroy_ib_ctx(ctx);
+    exit(1);
+}
+
+void destroy_ib_ctx(struct ib_ctx *ctx)
+{
+    // caller is responsible for release the raw memory
+    if (ctx->mrs)
+    {
+        for (size_t i = 0; i < ctx->mr_num; i++)
+        {
+            if (ctx->mrs[i])
+            {
+                ibv_dereg_mr(ctx->mrs[i]);
+            }
+        }
+        free(ctx->mrs);
+    }
+
+    if (ctx->qps)
+    {
+        for (size_t i = 0; i < ctx->qp_num; i++)
+        {
+            if (ctx->qps[i] != NULL)
+            {
+                ibv_destroy_qp(ctx->qps[i]);
+            }
+        }
+        free(ctx->qps);
+    }
+    if (ctx->send_channel)
+    {
+        ibv_destroy_comp_channel(ctx->send_channel);
+    }
+    if (ctx->send_cq)
+    {
+        ibv_destroy_cq(ctx->send_cq);
+    }
+    if (ctx->recv_cq)
+    {
+        ibv_destroy_cq(ctx->recv_cq);
+    }
+    if (ctx->srq)
+    {
+        ibv_destroy_srq(ctx->srq);
+    }
+    if (ctx->pd != NULL)
+    {
+        ibv_dealloc_pd(ctx->pd);
+    }
+
+    if (ctx->context != NULL)
+    {
+        ibv_close_device(ctx->context);
+    }
+}
+
+void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
+{
+
+    res->gid = ctx->gid;
+    res->psn = 0;
+    res->mr_num = ctx->mr_num;
+    res->qp_num = ctx->qp_num;
+    res->lid = ctx->lid;
+    res->sgid_idx = ctx->sgid_idx;
+    res->ib_port = ctx->ib_port;
+
+    uint32_t *qp_nums = (uint32_t *)calloc(res->qp_num, sizeof(uint32_t));
+    if (!qp_nums)
+    {
+        log_error("Error, fail to allocate mem for qps");
+        goto error;
+    }
+
+    res->qp_nums = qp_nums;
+
+    struct mr_info *mrs = (struct mr_info *)calloc(res->mr_num, sizeof(struct mr_info));
+    if (!mrs)
+    {
+        log_error("Error, fail to allocate mem for mrs");
+        goto error;
+    }
+
+    res->mrs = mrs;
+
+    for (size_t i = 0; i < ctx->qp_num; i++)
+    {
+        res->qp_nums[i] = ctx->qps[i]->qp_num;
+    }
+
+    for (size_t i = 0; i < ctx->mr_num; i++)
+    {
+        res->mrs[i].length = ctx->mrs[i]->length;
+        res->mrs[i].lkey = ctx->mrs[i]->lkey;
+        res->mrs[i].rkey = ctx->mrs[i]->rkey;
+        res->mrs[i].addr = ctx->mrs[i]->addr;
+    }
+    return;
+error:
+    log_error("init local ib res failed\n");
+    exit(1);
+}
+
+int send_ib_res(struct ib_res *res, int sock_fd)
+{
+    if (sock_write(sock_fd, res, sizeof(struct ib_res)) != sizeof(struct ib_res))
+    {
+        log_error("Error, Send ib res\n");
+        goto error;
+    }
+    for (size_t i = 0; i < res->qp_num; i++)
+    {
+
+        if (sock_write(sock_fd, &(res->qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
+        {
+            log_error("Error, Send qp_num at index %lu\n", i);
+            goto error;
+        }
+    }
+
+    for (size_t i = 0; i < res->mr_num; i++)
+    {
+
+        if (sock_write(sock_fd, &(res->mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
+        {
+            log_error("Error, Send ibv_mr at index %lu\n", i);
+            goto error;
+        }
+    }
+
+    return SUCCESS;
+
+error:
+    exit(1);
+}
+
+int recv_ib_res(struct ib_res *res, int sock_fd)
+{
+    if (sock_read(sock_fd, res, sizeof(struct ib_res)) != sizeof(struct ib_res))
+    {
+        log_error("Error, recv ib res\n");
+        goto error;
+    }
+    uint32_t *qp_nums = (uint32_t *)calloc(res->qp_num, sizeof(uint32_t));
+    if (!qp_nums)
+    {
+        log_error("Error, fail to allocate mem for qps");
+        goto error;
+    }
+    struct mr_info *mrs = (struct mr_info *)calloc(res->mr_num, sizeof(struct mr_info));
+    if (!mrs)
+    {
+        log_error("Error, fail to allocate mem for mrs");
+        goto error;
+    }
+    for (size_t i = 0; i < res->qp_num; i++)
+    {
+
+        if (sock_read(sock_fd, &(qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
+        {
+            log_error("Error, Recv qp_num at index %lu\n", i);
+            goto error;
+        }
+    }
+
+    res->qp_nums = qp_nums;
+
+    for (size_t i = 0; i < res->mr_num; i++)
+    {
+
+        if (sock_read(sock_fd, &(mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
+        {
+            log_error("Error, Recv ibv_mr at index %lu\n", i);
+            goto error;
+        }
+    }
+
+    res->mrs = mrs;
+
+    return SUCCESS;
+error:
+    exit(1);
+}
+
+void destroy_ib_res(struct ib_res *res)
+{
+    if (res)
+    {
+        free(res->qp_nums);
+        free(res->mrs);
+    }
+}
+
+int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp, char *buf,
+              int flag)
+{
+    int ret = 0;
+    struct ibv_send_wr *bad_send_wr;
+
+    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    struct ibv_send_wr send_wr = {.wr_id = wr_id,
+                                  .sg_list = &list,
+                                  .num_sge = 1,
+                                  .opcode = IBV_WR_SEND_WITH_IMM,
+                                  .send_flags = flag,
+                                  .imm_data = htonl(imm_data)};
+
+    ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
+    return ret;
+}
+
+int post_send_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
+
+                       char *buf)
+
+{
+    return post_send(req_size, lkey, wr_id, imm_data, qp, buf, IBV_SEND_SIGNALED);
+}
+
+int post_send_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
+                         char *buf)
+{
+    return post_send(req_size, lkey, wr_id, imm_data, qp, buf, 0);
+}
+
+int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_srq *srq, char *buf)
+{
+    int ret = 0;
+    struct ibv_recv_wr *bad_recv_wr;
+
+    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .sg_list = &list, .num_sge = 1};
+
+    ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
+    return ret;
+}
+
+int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+               uint32_t rkey, int send_flag)
+{
+    int ret = 0;
+    struct ibv_send_wr *bad_send_wr;
+
+    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    struct ibv_send_wr send_wr = {
+        .wr_id = wr_id,
+        .sg_list = &list,
+        .num_sge = 1,
+        .opcode = IBV_WR_RDMA_WRITE,
+        .send_flags = send_flag,
+        .wr.rdma.remote_addr = raddr,
+        .wr.rdma.rkey = rkey,
+    };
+
+    ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
+    return ret;
+}
+
+int post_write_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+                        uint32_t rkey)
+{
+    return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, IBV_SEND_SIGNALED);
+}
+
+int post_write_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
+                          uint64_t raddr, uint32_t rkey)
+{
+    return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, 0);
+}
+
+int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+                   uint32_t rkey, uint32_t imm_data, int flag)
+{
+    int ret = 0;
+    struct ibv_send_wr *bad_send_wr;
+
+    struct ibv_sge sg_list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    struct ibv_send_wr send_wr = {
+        .wr_id = wr_id,
+        .sg_list = &sg_list,
+        .num_sge = 1,
+        .opcode = IBV_WR_RDMA_WRITE_WITH_IMM,
+        .send_flags = flag,
+        .imm_data = htonl(imm_data),
+        .wr.rdma.remote_addr = raddr,
+        .wr.rdma.rkey = rkey,
+    };
+
+    ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
+    return ret;
+}
+
+int post_write_imm_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
+                            uint64_t raddr, uint32_t rkey, uint32_t imm_data)
+{
+    return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, IBV_SEND_SIGNALED);
+}
+
+int post_write_imm_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
+                              uint64_t raddr, uint32_t rkey, uint32_t imm_data)
+{
+    return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, 0);
+}
