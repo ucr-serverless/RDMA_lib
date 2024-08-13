@@ -38,7 +38,7 @@ TEST_OBJS=$(TEST_FILES:.c=.o)
 PERF_OBJS=$(PERF_FILES:.c=.o)
 UNITY_OBJS=$(UNITY_FILES:.c=.o)
 
-PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection
+PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 
@@ -54,6 +54,11 @@ $(BIN_DIR)/rdma-bench: $(SRC_OBJS) $(PERF_OBJS)
 $(BIN_DIR)/rc_connection: $(SRC_OBJS) $(EXAMPLE_OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(SRC_OBJS) $(LDFLAGS) $(LIBS) $(LDLIBS)
+
+$(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/test_bitmap.o $(EXAMPLE_DIR)/bitmap.o
+
 
 $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 	@mkdir -p $(BIN_DIR)
