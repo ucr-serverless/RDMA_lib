@@ -83,7 +83,12 @@ int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
         log_error("Error, ibv_create_comp_channel() failed\n");
         goto error;
     }
-    ctx->send_cq = ibv_create_cq(ctx->context, ctx->device_attr.max_cqe - 1, NULL, ctx->send_channel, 0);
+    size_t retry_cnt = 0;
+    do
+    {
+        ctx->send_cq = ibv_create_cq(ctx->context, params->init_cqe_num, NULL, ctx->send_channel, 0);
+        params->init_cqe_num /= 2;
+    } while (!ctx->send_cq && retry_cnt < RETRY_MAX);
     if (unlikely(!(ctx->send_cq)))
     {
         log_error("Error, ibv_create_qp() send completion queue failed\n");
@@ -92,7 +97,12 @@ int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
 
     ctx->send_cqe = ctx->send_cq->cqe;
 
-    ctx->recv_cq = ibv_create_cq(ctx->context, ctx->device_attr.max_cqe - 1, NULL, NULL, 0);
+    retry_cnt = 0;
+    do
+    {
+        ctx->recv_cq = ibv_create_cq(ctx->context, params->init_cqe_num, NULL, NULL, 0);
+        params->init_cqe_num /= 2;
+    } while (!ctx->send_cq && retry_cnt < RETRY_MAX);
     if (unlikely(!(ctx->recv_cq)))
     {
         log_error("Error, ibv_create_qp() receive completion queue failed\n");

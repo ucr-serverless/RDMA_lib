@@ -4,6 +4,7 @@
 #include <infiniband/verbs.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t max_send_wr)
 {
@@ -56,19 +57,19 @@ int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct user_param *pa
     return SUCCESS;
 }
 
-int modify_qp_init(struct ibv_qp *qp, uint8_t ib_port)
+int modify_qp_init_verbose(struct ibv_qp *qp, uint8_t l_ib_port)
 {
     int ret = 0;
     struct ibv_qp_attr qp_attr = {
         .qp_state = IBV_QPS_INIT,
         .pkey_index = 0,
-        .port_num = ib_port,
+        .port_num = l_ib_port,
         .qp_access_flags =
             IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC | IBV_ACCESS_REMOTE_WRITE,
     };
 
     ret = ibv_modify_qp(qp, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
-    if (unlikely(!ret))
+    if (unlikely(ret != 0))
     {
         log_error("Failed to modify qp to INIT.");
         return FAILURE;
@@ -76,8 +77,13 @@ int modify_qp_init(struct ibv_qp *qp, uint8_t ib_port)
     return SUCCESS;
 }
 
-int modify_qp_init_to_rtr(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, uint16_t r_lid, uint8_t l_ib_port,
-                          uint8_t l_sgid_index, union ibv_gid r_gid)
+int modify_qp_init(struct ibv_qp *qp, struct ib_res *local_res)
+{
+    return modify_qp_init_verbose(qp, local_res->ib_port);
+}
+
+int modify_qp_init_to_rtr_verbose(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, uint16_t r_lid,
+                                  union ibv_gid r_gid, uint8_t l_ib_port, uint8_t l_sgid_index)
 
 {
     int ret = 0;
@@ -97,7 +103,7 @@ int modify_qp_init_to_rtr(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, 
 
     if (qp_attr.ah_attr.dlid == 0)
     {
-        printf("Using RoCEv2 transport\n");
+        log_info("Using RoCEv2 transport\n");
         qp_attr.ah_attr.is_global = 1; // grh should be configured for RoCEv2
         qp_attr.ah_attr.grh.sgid_index = l_sgid_index;
         qp_attr.ah_attr.grh.dgid = r_gid;
@@ -108,7 +114,7 @@ int modify_qp_init_to_rtr(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, 
     ret = ibv_modify_qp(qp, &qp_attr,
                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
                             IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER | 0);
-    if (unlikely(ret == 0))
+    if (unlikely(ret != 0))
     {
         log_error("Failed to change qp to rtr");
         return FAILURE;
@@ -116,7 +122,21 @@ int modify_qp_init_to_rtr(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, 
     return SUCCESS;
 }
 
-int modify_qp_rtr_to_rts(struct ibv_qp *qp, uint32_t l_psn)
+int modify_qp_init_to_rtr_qp_num_idx(struct ibv_qp *qp, struct ib_res *local_res, struct ib_res *remote_res,
+                                     size_t r_qp_num_idx)
+{
+    return modify_qp_init_to_rtr_verbose(qp, remote_res->qp_nums[r_qp_num_idx], remote_res->psn, remote_res->lid,
+                                         remote_res->gid, local_res->ib_port, local_res->sgid_idx);
+}
+
+int modify_qp_init_to_rtr_qp_num(struct ibv_qp *qp, struct ib_res *local_res, struct ib_res *remote_res,
+                                 uint32_t r_qp_num)
+{
+    return modify_qp_init_to_rtr_verbose(qp, r_qp_num, remote_res->psn, remote_res->lid, remote_res->gid,
+                                         local_res->ib_port, local_res->sgid_idx);
+}
+
+int modify_qp_rtr_to_rts_verbose(struct ibv_qp *qp, uint32_t l_psn)
 {
     int ret = 0;
     struct ibv_qp_attr qp_attr = {
@@ -131,10 +151,15 @@ int modify_qp_rtr_to_rts(struct ibv_qp *qp, uint32_t l_psn)
     ret = ibv_modify_qp(qp, &qp_attr,
                         IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
                             IBV_QP_MAX_QP_RD_ATOMIC);
-    if (unlikely(ret == 0))
+    if (unlikely(ret != 0))
     {
         log_error("Failed to change qp to rts");
         return FAILURE;
     }
     return SUCCESS;
+}
+
+int modify_qp_rtr_to_rts(struct ibv_qp *qp, struct ib_res *local_res)
+{
+    return modify_qp_rtr_to_rts_verbose(qp, local_res->psn);
 }

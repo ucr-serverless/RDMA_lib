@@ -1,5 +1,7 @@
 #include "config.h"
+#include "debug.h"
 #include "ib.h"
+#include "qp.h"
 #include "sock.h"
 #include "utils.h"
 #include <arpa/inet.h>
@@ -44,12 +46,13 @@ int main(int argc, char *argv[])
     }
 
     struct user_param params = {
-        .device_idx = 3,
+        .device_idx = 2,
         .sgid_idx = 3,
         .ib_port = 1,
         .mr_num = 2,
         .qp_num = 2,
         .bf_size = 2048,
+        .init_cqe_num = 128,
     };
 
     void **buffers = calloc(params.mr_num, sizeof(void *));
@@ -124,11 +127,20 @@ int main(int argc, char *argv[])
     {
         close(self_fd);
         close(peer_fd);
+        modify_qp_init(ctx.qps[0], &local_res);
+        modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0);
+        modify_qp_rtr_to_rts(ctx.qps[0], &local_res);
     }
     else
     {
         close(peer_fd);
+        modify_qp_init(ctx.qps[0], &local_res);
+        modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0);
+        modify_qp_rtr_to_rts(ctx.qps[0], &local_res);
     }
+
+    printf("finished setup connection\n");
+
     destroy_ib_ctx(&ctx);
     free(buf);
     free(buffers);

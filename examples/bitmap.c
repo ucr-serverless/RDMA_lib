@@ -56,10 +56,12 @@ void bitmap_print_hex(bitmap *b)
     printf("\n");
 }
 
-void bitmap_print_bit(bitmap *b) {
+void bitmap_print_bit(bitmap *b)
+{
     for (size_t i = 0; i < b->bits; i++)
     {
-        if (i % 32 == 0) {
+        if (i % 32 == 0)
+        {
             printf(" ");
         }
         printf("%d", bitmap_read(b, i));

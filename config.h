@@ -4,6 +4,8 @@
 #include "utils.h"
 #include <stdint.h>
 #include <stdlib.h>
+
+#define RETRY_MAX 5
 struct user_param
 {
     uint32_t node_idx;
@@ -14,6 +16,7 @@ struct user_param
     uint64_t bf_size;
     uint32_t max_send_wr;
     uint8_t ib_port;
+    uint32_t init_cqe_num;
     void *extras;
 };
 
