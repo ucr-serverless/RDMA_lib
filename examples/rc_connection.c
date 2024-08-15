@@ -127,16 +127,18 @@ int main(int argc, char *argv[])
     {
         close(self_fd);
         close(peer_fd);
-        modify_qp_init(ctx.qps[0], &local_res);
-        modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0);
-        modify_qp_rtr_to_rts(ctx.qps[0], &local_res);
+        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        /* modify_qp_init(ctx.qps[0], &local_res); */
+        /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
+        /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
     }
     else
     {
         close(peer_fd);
-        modify_qp_init(ctx.qps[0], &local_res);
-        modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0);
-        modify_qp_rtr_to_rts(ctx.qps[0], &local_res);
+        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        /* modify_qp_init(ctx.qps[0], &local_res); */
+        /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
+        /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
     }
 
     printf("finished setup connection\n");

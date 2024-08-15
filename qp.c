@@ -168,15 +168,18 @@ int modify_qp_init_to_rts(struct ibv_qp *qp, struct ib_res *local_res, struct ib
 {
     int ret = 0;
     ret = modify_qp_init(qp, local_res);
-    if (unlikely(ret != SUCCESS)) {
+    if (unlikely(ret != SUCCESS))
+    {
         return FAILURE;
     }
     ret = modify_qp_init_to_rtr_qp_num(qp, local_res, remote_res, r_qp_num);
-    if (unlikely(ret != SUCCESS)) {
+    if (unlikely(ret != SUCCESS))
+    {
         return FAILURE;
     }
     ret = modify_qp_rtr_to_rts(qp, local_res);
-    if (unlikely(ret != SUCCESS)) {
+    if (unlikely(ret != SUCCESS))
+    {
         return FAILURE;
     }
     return SUCCESS;
