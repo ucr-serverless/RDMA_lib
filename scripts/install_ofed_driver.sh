@@ -52,4 +52,4 @@ tar xvf ofed.tgz
 cd MLNX_OFED_LINUX-24.04-0.7.0.0-ubuntu20.04-x86_64
 sudo ./mlnxofedinstall --add-kernel-support
 
-echo "reboot the machine after sucessfule installation, failed to update firmware is OK"
+echo "Install ofed driver finished, failed to update firmware is OK"
