@@ -111,6 +111,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
 
     ctx->recv_cqe = ctx->recv_cq->cqe;
 
+    ctx->srqe = ctx->device_attr.max_srq_wr - 1;
     struct ibv_srq_init_attr attr = {.attr = {/* when using sreq, rx_depth sets the max_wr */
                                               .max_wr = ctx->device_attr.max_srq_wr - 1,
                                               .max_sge = 1}};
@@ -367,17 +368,29 @@ int post_send_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint3
 
 int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_srq *srq, char *buf)
 {
-    int ret = 0;
     struct ibv_recv_wr *bad_recv_wr;
 
     struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
 
     struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .sg_list = &list, .num_sge = 1};
 
-    ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
-    return ret;
+    return ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
 }
-
+int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+                           uint32_t num)
+{
+    int ret = 0;
+    for (size_t i = 0; i < num; i++)
+    {
+        ret = post_srq_recv(req_size, lkey, wr_id, srq, buf);
+        if (unlikely(ret != 0))
+        {
+            log_error("Error, pre post srq requests fail\n");
+            return FAILURE;
+        }
+    }
+    return SUCCESS;
+}
 int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
                uint32_t rkey, int send_flag)
 {
@@ -435,13 +448,13 @@ int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_
     return ret;
 }
 
-int post_write_imm_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
+int post_write_imm_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                             uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, IBV_SEND_SIGNALED);
 }
 
-int post_write_imm_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
+int post_write_imm_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, 0);

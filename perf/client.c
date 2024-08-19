@@ -403,7 +403,7 @@ void *client_thread_write_imm_signaled(void *arg)
     roffset = 0;
     while (!stop)
     {
-        ret = post_write_imm_signaled(msg_size, lkey, 0, *qp, buf_ptr, rptr, rkey, 0);
+        ret = post_write_imm_signaled(*qp, buf_ptr, msg_size, lkey, 0, rptr, rkey, 0);
         if (unlikely(ret != 0))
         {
             log_error("send write imme_data failed, error ret: %d", ret);
@@ -543,14 +543,14 @@ void *client_thread_write_imm_unsignaled(void *arg)
     {
         for (int i = 0; i < signal_freq; i++)
         {
-            ret = post_write_imm_unsignaled(msg_size, lkey, 1, *qp, buf_ptr, rbuf_ptr, rkey, 1);
+            ret = post_write_imm_unsignaled(*qp, buf_ptr, msg_size, lkey, 1, rbuf_ptr, rkey, 1);
             buf_offset = (buf_offset + msg_size) % buf_size;
             buf_ptr = buf_base + buf_offset;
             rbuf_offset = (rbuf_offset + msg_size) % rbuf_size;
             rbuf_ptr = rbuf_base + rbuf_offset;
         }
 
-        ret = post_write_imm_signaled(msg_size, lkey, 1, *qp, buf_ptr, rbuf_ptr, rkey, 1);
+        ret = post_write_imm_signaled(*qp, buf_ptr, msg_size, lkey, 1, rbuf_ptr, rkey, 1);
         buf_offset = (buf_offset + msg_size) % buf_size;
         buf_ptr = buf_base + buf_offset;
         rbuf_offset = (rbuf_offset + msg_size) % rbuf_size;
