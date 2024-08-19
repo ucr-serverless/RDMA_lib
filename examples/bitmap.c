@@ -1,4 +1,5 @@
 #include "bitmap.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,6 +13,16 @@ void bitmap_set(bitmap *b, int n)
     b->array[word] |= bitmap_one << position;
 }
 
+void bitmap_set_consecutive(bitmap *b, uint32_t start_idx, uint32_t slot_len)
+{
+    assert(start_idx < b->bits);
+    assert(start_idx + slot_len <= b->bits);
+    for (size_t i = 0; i < slot_len; i++)
+    {
+        bitmap_set(b, start_idx + i);
+    }
+}
+
 void bitmap_clear(bitmap *b, int n)
 {
     assert(n >= 0 && n < b->bits);
@@ -20,6 +31,15 @@ void bitmap_clear(bitmap *b, int n)
     b->array[word] &= ~(bitmap_one << position);
 }
 
+void bitmap_clear_consecutive(bitmap *b, uint32_t start_idx, uint32_t slot_len)
+{
+    assert(start_idx < b->bits);
+    assert(start_idx + slot_len <= b->bits);
+    for (size_t i = 0; i < slot_len; i++)
+    {
+        bitmap_clear(b, start_idx + i);
+    }
+}
 int bitmap_read(bitmap *b, int n)
 {
     assert(n >= 0 && n < b->bits);

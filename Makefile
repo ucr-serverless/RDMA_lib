@@ -53,7 +53,7 @@ $(BIN_DIR)/rdma-bench: $(SRC_OBJS) $(PERF_OBJS)
 
 $(BIN_DIR)/rc_connection: $(SRC_OBJS) $(EXAMPLE_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(SRC_OBJS) $(LDFLAGS) $(LIBS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LIBS) $(LDLIBS)
 
 $(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
 	@mkdir -p $(BIN_DIR)

@@ -1,17 +1,22 @@
 #include "config.h"
 #include "debug.h"
+#include "examples/bitmap.h"
 #include "ib.h"
+#include "memory_management.h"
 #include "qp.h"
 #include "sock.h"
 #include "utils.h"
 #include <arpa/inet.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
+#include <infiniband/verbs.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 int main(int argc, char *argv[])
@@ -122,29 +127,94 @@ int main(int argc, char *argv[])
         printf("mr rkey %d\n", local_res.mrs[i].rkey);
     }
 
+    /* uint32_t msg_size = 2048; */
+
 #endif /* ifdef DEBUG */
+    void *raddr = NULL;
+    uint32_t blk_size = 4;
+    void *laddr = local_res.mrs[0].addr;
+    uint32_t rkey = 0;
+    uint32_t msg_size = 2048;
+    uint32_t mr_info_len = 1;
+    int ret = 0;
     if (is_server)
     {
-        close(self_fd);
-        close(peer_fd);
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
         /* modify_qp_init(ctx.qps[0], &local_res); */
         /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
         /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
+        bitmap *bp;
+        uint32_t slot;
+        uint32_t slot_num;
+        init_qp_bitmap(ctx.mr_num / ctx.qp_num, params.bf_size, blk_size, &bp);
+        find_avaliable_slot(bp, msg_size, blk_size, remote_res.mrs, mr_info_len, &slot, &slot_num, &raddr, &rkey);
+        printf("slot: %d\n", slot);
+        printf("slot_num: %d\n", slot_num);
+        printf("rkey: %d\n", rkey);
+        printf("raddr: %p\n", raddr);
+
+        *(char *)laddr = '1';
+        printf("local content: %c\n", *(char *)laddr);
+
+        ret = pre_post_dumb_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
+                                     ctx.srqe);
+
+        ret = post_write_imm_signaled(ctx.qps[0], local_res.mrs[0].addr, msg_size, local_res.mrs[0].lkey, 0,
+                                      (uint64_t)raddr, rkey, slot);
+
+        printf("%d\n", ret);
+        /* int ret = 0; */
+
+        printf("addr: %p\n", raddr);
+        printf("slot: %d\n", slot);
+        bitmap_set_consecutive(bp, slot, slot_num);
+        bitmap_print_bit(bp);
+        void * recv_addr = NULL;
+        uint32_t recv_len = 0;
+        receive_release_signal(peer_fd, &recv_addr, &recv_len);
+        printf("recv_addr: %p\n", recv_addr);
+        printf("recv_len: %d\n", recv_len);
+        remote_addr_convert_slot_idx(recv_addr, recv_len, remote_res.mrs, mr_info_len, blk_size, &slot, &slot_num);
+        printf("slot_idx: %d\n", slot);
+        printf("slot_num: %d\n", slot_num);
+        bitmap_clear_consecutive(bp, slot, slot_num);
+        bitmap_print_bit(bp);
+
+        close(self_fd);
+        close(peer_fd);
     }
     else
     {
-        close(peer_fd);
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        pre_post_dumb_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
+                               ctx.srqe);
         /* modify_qp_init(ctx.qps[0], &local_res); */
         /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
         /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
+        struct ibv_wc wc;
+        int wc_num = 0;
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+
+        uint32_t slot_idx = wc.imm_data;
+        printf("slot: %d\n", slot_idx);
+        printf("length: %d\n", wc.byte_len);
+        printf("optcode: %d\n", wc.opcode);
+        printf("qp_num: %d\n", wc.qp_num);
+        void *addr;
+        local_slot_idx_convert(&local_res, wc.qp_num, slot_idx, ctx.mr_num / ctx.qp_num, blk_size, &addr);
+        printf("received addr: %p\n", addr);
+        printf("received content: %c\n", *(char*)addr);
+        send_release_signal(peer_fd, addr, wc.byte_len);
+
+        close(peer_fd);
     }
 
-    printf("finished setup connection\n");
+printf("finished setup connection\n");
 
-    destroy_ib_ctx(&ctx);
-    free(buf);
-    free(buffers);
-    return 0;
+destroy_ib_ctx(&ctx);
+free(buf);
+free(buffers);
+return 0;
 }
