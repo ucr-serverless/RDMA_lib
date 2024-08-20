@@ -17,11 +17,6 @@
 #define unlikely(x) (!!(x))
 #endif // !USE_RTE_MEMPOOL
 
-enum rdma_status
-{
-    RDMA_SUCCESS = 0,
-    RDMA_FAILURE = 1,
-};
 
 void print_ibv_gid(union ibv_gid gid);
 #endif /* UTILS_H_ */

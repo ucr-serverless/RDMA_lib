@@ -152,11 +152,11 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         ctx->remote_mrs_num = params->remote_mr_num;
     }
     ibv_free_device_list(dev_list);
-    return 0;
+    return RDMA_SUCCESS;
 error:
     ibv_free_device_list(dev_list);
     destroy_ib_ctx(ctx);
-    exit(1);
+    return RDMA_FAILURE;
 }
 
 void destroy_ib_ctx(struct ib_ctx *ctx)
