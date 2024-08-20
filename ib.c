@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "config.h"
+#include "rdma_config.h"
 #include "debug.h"
 #include "ib.h"
 #include "mr.h"

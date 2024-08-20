@@ -1,4 +1,4 @@
-#include "config.h"
+#include "rdma_config.h"
 #include "debug.h"
 #include "examples/bitmap.h"
 #include "ib.h"

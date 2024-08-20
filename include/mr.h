@@ -1,7 +1,7 @@
 #ifndef MR_H_
 #define MR_H_
 
-#include "config.h"
+#include "rdma_config.h"
 #include "ib.h"
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>

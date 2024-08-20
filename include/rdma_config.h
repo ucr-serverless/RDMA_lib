@@ -1,5 +1,5 @@
-#ifndef CONFIG_H_
-#define CONFIG_H_
+#ifndef RDMA_CONFIG_H_
+#define RDMA_CONFIG_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,4 +19,4 @@ struct rdma_param
     void *extras;
 };
 
-#endif /* CONFIG_H_*/
+#endif /* RDMA_CONFIG_H_*/

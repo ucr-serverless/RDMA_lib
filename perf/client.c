@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "config.h"
+#include "rdma_config.h"
 #include "debug.h"
 #include "ib.h"
 #include "qp.h"

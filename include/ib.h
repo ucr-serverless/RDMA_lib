@@ -1,7 +1,7 @@
 #ifndef IB_H_
 #define IB_H_
 
-#include "config.h"
+#include "rdma_config.h"
 #include <arpa/inet.h>
 #include <byteswap.h>
 #include <endian.h>
