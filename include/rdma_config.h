@@ -11,8 +11,10 @@ struct rdma_param
     uint32_t device_idx;
     uint32_t sgid_idx;
     uint32_t qp_num;
-    uint32_t mr_num;
-    uint64_t bf_size;
+    uint32_t remote_mr_num;
+    uint64_t remote_mr_size;
+    uint32_t local_mr_num;
+    uint64_t local_mr_size;
     uint32_t max_send_wr;
     uint8_t ib_port;
     uint32_t init_cqe_num;

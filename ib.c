@@ -7,15 +7,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "rdma_config.h"
 #include "debug.h"
 #include "ib.h"
 #include "mr.h"
 #include "qp.h"
+#include "rdma_config.h"
 #include "sock.h"
 #include "utils.h"
 
-int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **buffers)
+int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers)
 {
     int num_of_device;
     struct ibv_device **dev_list;
@@ -129,12 +129,28 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **buffers)
         goto error;
     }
 
-    if (unlikely(register_multiple_mr(ctx, params, buffers) == RDMA_FAILURE))
+    if (local_buffers)
     {
-        log_error("Error, register mrs\n");
-        goto error;
-    }
+        if (unlikely(register_multiple_local_mr(ctx, local_buffers, params->local_mr_size, params->local_mr_num,
+                                                &ctx->local_mrs) == RDMA_FAILURE))
+        {
+            log_error("Error, register mrs\n");
+            goto error;
+        }
 
+        ctx->local_mrs_num = params->local_mr_num;
+    }
+    if (remote_buffers)
+    {
+        if (unlikely(register_multiple_remote_mr(ctx, remote_buffers, params->remote_mr_size, params->remote_mr_num,
+                                                 &ctx->remote_mrs) == RDMA_FAILURE))
+        {
+            log_error("Error, register mrs\n");
+            goto error;
+        }
+
+        ctx->remote_mrs_num = params->remote_mr_num;
+    }
     ibv_free_device_list(dev_list);
     return 0;
 error:
@@ -146,18 +162,29 @@ error:
 void destroy_ib_ctx(struct ib_ctx *ctx)
 {
     // caller is responsible for release the raw memory
-    if (ctx->mrs)
+    if (ctx->remote_mrs)
     {
-        for (size_t i = 0; i < ctx->mr_num; i++)
+        for (size_t i = 0; i < ctx->remote_mrs_num; i++)
         {
-            if (ctx->mrs[i])
+            if (ctx->remote_mrs[i])
             {
-                ibv_dereg_mr(ctx->mrs[i]);
+                ibv_dereg_mr(ctx->remote_mrs[i]);
             }
         }
-        free(ctx->mrs);
+        free(ctx->remote_mrs);
     }
 
+    if (ctx->local_mrs)
+    {
+        for (size_t i = 0; i < ctx->local_mrs_num; i++)
+        {
+            if (ctx->local_mrs[i])
+            {
+                ibv_dereg_mr(ctx->local_mrs[i]);
+            }
+        }
+        free(ctx->local_mrs);
+    }
     if (ctx->qps)
     {
         for (size_t i = 0; i < ctx->qp_num; i++)
@@ -201,7 +228,7 @@ void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 
     res->gid = ctx->gid;
     res->psn = 0;
-    res->mr_num = ctx->mr_num;
+    res->mr_num = ctx->remote_mrs_num;
     res->qp_num = ctx->qp_num;
     res->lid = ctx->lid;
     res->sgid_idx = ctx->sgid_idx;
@@ -230,12 +257,12 @@ void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
         res->qp_nums[i] = ctx->qps[i]->qp_num;
     }
 
-    for (size_t i = 0; i < ctx->mr_num; i++)
+    for (size_t i = 0; i < ctx->remote_mrs_num; i++)
     {
-        res->mrs[i].length = ctx->mrs[i]->length;
-        res->mrs[i].lkey = ctx->mrs[i]->lkey;
-        res->mrs[i].rkey = ctx->mrs[i]->rkey;
-        res->mrs[i].addr = ctx->mrs[i]->addr;
+        res->mrs[i].length = ctx->remote_mrs[i]->length;
+        res->mrs[i].lkey = ctx->remote_mrs[i]->lkey;
+        res->mrs[i].rkey = ctx->remote_mrs[i]->rkey;
+        res->mrs[i].addr = ctx->remote_mrs[i]->addr;
     }
     return;
 error:

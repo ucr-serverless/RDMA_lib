@@ -6,10 +6,10 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "rdma_config.h"
 #include "debug.h"
 #include "ib.h"
 #include "qp.h"
+#include "rdma_config.h"
 #include "setup_ib.h"
 #include "sock.h"
 #include "utils.h"

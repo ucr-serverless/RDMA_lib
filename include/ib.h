@@ -20,8 +20,10 @@ struct ib_ctx
     struct ibv_pd *pd;
     uint32_t qp_num;
     struct ibv_qp **qps;
-    uint32_t mr_num;
-    struct ibv_mr **mrs;
+    uint32_t remote_mrs_num;
+    uint32_t local_mrs_num;
+    struct ibv_mr **remote_mrs;
+    struct ibv_mr **local_mrs;
     struct ibv_srq *srq;
     struct ibv_cq *send_cq;
     struct ibv_cq *recv_cq;
@@ -34,12 +36,10 @@ struct ib_ctx
     uint32_t send_cqe;
     uint32_t recv_cqe;
     uint32_t srqe;
-    void **buffers;
-    uint64_t bf_size;
     uint8_t ib_port;
 };
 
-int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **buffers);
+int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers);
 void destroy_ib_ctx(struct ib_ctx *ctx);
 int post_send_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
                        char *buf);

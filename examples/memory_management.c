@@ -126,14 +126,20 @@ int remote_slot_idx_convert(uint32_t slot_idx, struct mr_info *start, uint32_t m
     return RDMA_SUCCESS;
 }
 
-int remote_addr_convert_slot_idx(void *remote_addr, uint32_t remote_len, struct mr_info *start, uint32_t mr_info_len, uint32_t slot_size, uint32_t *slot_idx, uint32_t *slot_num)
+int remote_addr_convert_slot_idx(void *remote_addr, uint32_t remote_len, struct mr_info *start, uint32_t mr_info_len,
+                                 uint32_t slot_size, uint32_t *slot_idx, uint32_t *slot_num)
 {
     uint32_t result = 0;
-    for (size_t i = 0; i < mr_info_len; i++) {
-        if ((unsigned char *)start[i].addr <= (unsigned char *)remote_addr  && (unsigned char *)remote_addr < (unsigned char *)start[i].addr + start[i].length ) {
-            if ((unsigned char *)remote_addr + remote_len <= (unsigned char *)start[i].addr + start[i].length) {
-                uint32_t slot_diff = (unsigned char *)remote_addr - (unsigned char*)start[i].addr;
-                if (slot_diff % slot_size != 0) {
+    for (size_t i = 0; i < mr_info_len; i++)
+    {
+        if ((unsigned char *)start[i].addr <= (unsigned char *)remote_addr &&
+            (unsigned char *)remote_addr < (unsigned char *)start[i].addr + start[i].length)
+        {
+            if ((unsigned char *)remote_addr + remote_len <= (unsigned char *)start[i].addr + start[i].length)
+            {
+                uint32_t slot_diff = (unsigned char *)remote_addr - (unsigned char *)start[i].addr;
+                if (slot_diff % slot_size != 0)
+                {
                     return RDMA_FAILURE;
                 }
                 result += slot_diff / slot_size;

@@ -20,7 +20,6 @@ extern struct ConfigInfo config_info;
 #define SIG_INTERVAL 1000
 #define NUM_WC 20
 
-
 enum MsgType
 {
     MSG_CTL_START = 100,

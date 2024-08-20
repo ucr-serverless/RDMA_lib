@@ -1,9 +1,9 @@
-#include "rdma_config.h"
 #include "debug.h"
 #include "examples/bitmap.h"
 #include "ib.h"
 #include "memory_management.h"
 #include "qp.h"
+#include "rdma_config.h"
 #include "sock.h"
 #include "utils.h"
 #include <arpa/inet.h>
@@ -54,21 +54,21 @@ int main(int argc, char *argv[])
         .device_idx = 2,
         .sgid_idx = 3,
         .ib_port = 1,
-        .mr_num = 2,
         .qp_num = 2,
-        .bf_size = 2048,
+        .remote_mr_num = 2,
+        .remote_mr_size = 2048,
         .init_cqe_num = 128,
     };
 
-    void **buffers = calloc(params.mr_num, sizeof(void *));
+    void **buffers = calloc(params.remote_mr_num, sizeof(void *));
     assert(buffers);
-    void *buf = calloc(params.mr_num, params.bf_size);
+    void *buf = calloc(params.remote_mr_num, params.remote_mr_size);
     assert(buf);
-    for (size_t i = 0; i < params.mr_num; i++)
+    for (size_t i = 0; i < params.remote_mr_num; i++)
     {
-        buffers[i] = buf + i * params.bf_size;
+        buffers[i] = buf + i * params.remote_mr_size;
     }
-    init_ib_ctx(&ctx, &params, buffers);
+    init_ib_ctx(&ctx, &params, buffers, NULL);
     printf("Hello, World!\n");
 
     int self_fd = 0;
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
         bitmap *bp;
         uint32_t slot;
         uint32_t slot_num;
-        init_qp_bitmap(ctx.mr_num / ctx.qp_num, params.bf_size, blk_size, &bp);
+        init_qp_bitmap(ctx.remote_mrs_num / ctx.qp_num, params.remote_mr_size, blk_size, &bp);
         find_avaliable_slot(bp, msg_size, blk_size, remote_res.mrs, mr_info_len, &slot, &slot_num, &raddr, &rkey);
         printf("slot: %d\n", slot);
         printf("slot_num: %d\n", slot_num);
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
         printf("slot: %d\n", slot);
         bitmap_set_consecutive(bp, slot, slot_num);
         bitmap_print_bit(bp);
-        void * recv_addr = NULL;
+        void *recv_addr = NULL;
         uint32_t recv_len = 0;
         receive_release_signal(peer_fd, &recv_addr, &recv_len);
         printf("recv_addr: %p\n", recv_addr);
@@ -203,18 +203,18 @@ int main(int argc, char *argv[])
         printf("optcode: %d\n", wc.opcode);
         printf("qp_num: %d\n", wc.qp_num);
         void *addr;
-        local_slot_idx_convert(&local_res, wc.qp_num, slot_idx, ctx.mr_num / ctx.qp_num, blk_size, &addr);
+        local_slot_idx_convert(&local_res, wc.qp_num, slot_idx, ctx.remote_mrs_num / ctx.qp_num, blk_size, &addr);
         printf("received addr: %p\n", addr);
-        printf("received content: %c\n", *(char*)addr);
+        printf("received content: %c\n", *(char *)addr);
         send_release_signal(peer_fd, addr, wc.byte_len);
 
         close(peer_fd);
     }
 
-printf("finished setup connection\n");
+    printf("finished setup connection\n");
 
-destroy_ib_ctx(&ctx);
-free(buf);
-free(buffers);
-return 0;
+    destroy_ib_ctx(&ctx);
+    free(buf);
+    free(buffers);
+    return 0;
 }

@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "utils.h"
 #include <infiniband/verbs.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 int register_local_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr)
@@ -26,40 +27,49 @@ int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_
     return RDMA_SUCCESS;
 }
 
-int register_multiple_mr(struct ib_ctx *ctx, struct rdma_param *params, void **buffers)
+int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+                         bool is_local_buffer, struct ibv_mr ***mr_list)
 {
-    assert(params->mr_num > 0);
-    assert(params->mr_num < ctx->device_attr.max_mr);
-    assert(params->bf_size > 0);
-    ctx->mr_num = params->mr_num;
-    ctx->buffers = buffers;
-    ctx->bf_size = params->bf_size;
-    if (unlikely(!ctx->buffers))
+    assert(buffer_size > 0);
+    assert(buffers_len > 0);
+    if (unlikely(!buffers))
     {
         log_error("Error, buffers not passed\n");
         return RDMA_FAILURE;
     }
 
-    ctx->mrs = (struct ibv_mr **)calloc(ctx->mr_num, sizeof(struct ibv_mr *));
+    *mr_list = (struct ibv_mr **)calloc(ctx->remote_mrs_num, sizeof(struct ibv_mr *));
 
-    if (unlikely(!ctx->mrs))
+    if (unlikely(!(*mr_list)))
     {
         log_error("Error, allocate mrs failure\n");
         return RDMA_FAILURE;
     }
 
-    for (size_t i = 0; i < ctx->mr_num; i++)
+    for (size_t i = 0; i < buffers_len; i++)
     {
-        if (!ctx->buffers[i])
+        if (!buffers[i])
         {
             log_error("Error, buffer %lu is NULL\n", i);
             return RDMA_FAILURE;
         }
-        if (unlikely(register_remote_mr(ctx->pd, ctx->buffers[i], ctx->bf_size, &(ctx->mrs[i])) == RDMA_FAILURE))
+        if (unlikely(register_remote_mr(ctx->pd, buffers[i], buffer_size, &((*mr_list)[i])) == RDMA_FAILURE))
         {
             log_error("Error, register mr fail\n");
             return RDMA_FAILURE;
         }
     }
     return RDMA_SUCCESS;
+}
+
+int register_multiple_remote_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+                                struct ibv_mr ***mr_list)
+{
+    return register_multiple_mr(ctx, buffers, buffer_size, buffers_len, false, mr_list);
+}
+
+int register_multiple_local_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+                               struct ibv_mr ***mr_list)
+{
+    return register_multiple_mr(ctx, buffers, buffer_size, buffers_len, true, mr_list);
 }
