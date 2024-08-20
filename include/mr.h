@@ -3,7 +3,6 @@
 
 #include "config.h"
 #include "ib.h"
-#include "utils.h"
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 #include <stdint.h>

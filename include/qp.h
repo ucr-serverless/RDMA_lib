@@ -3,8 +3,6 @@
 
 #include "config.h"
 #include "ib.h"
-#include "mr.h"
-#include "utils.h"
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
 

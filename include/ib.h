@@ -2,8 +2,6 @@
 #define IB_H_
 
 #include "config.h"
-#include "sock.h"
-#include "utils.h"
 #include <arpa/inet.h>
 #include <byteswap.h>
 #include <endian.h>

@@ -15,7 +15,7 @@ endif
 
 
 CFLAGS += -Wall -Werror  -O3
-INCLUDES = -I./ -I./test/unity -I./perf
+INCLUDES = -I./ -I./test/unity -I./perf -I./include
 LDFLAGS += -libverbs
 LIBS=-pthread
 
