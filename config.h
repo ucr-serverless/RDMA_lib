@@ -1,12 +1,11 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
-#include "utils.h"
 #include <stdint.h>
 #include <stdlib.h>
 
 #define RETRY_MAX 5
-struct user_param
+struct rdma_param
 {
     uint32_t node_idx;
     uint32_t device_idx;

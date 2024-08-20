@@ -41,7 +41,7 @@ struct ib_ctx
     uint8_t ib_port;
 };
 
-int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers);
+int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **buffers);
 void destroy_ib_ctx(struct ib_ctx *ctx);
 int post_send_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
                        char *buf);

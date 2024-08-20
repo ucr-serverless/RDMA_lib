@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    struct user_param params = {
+    struct rdma_param params = {
         .device_idx = 2,
         .sgid_idx = 3,
         .ib_port = 1,

@@ -31,12 +31,12 @@ int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t m
         goto error;
     }
 
-    return SUCCESS;
+    return RDMA_SUCCESS;
 error:
-    return FAILURE;
+    return RDMA_FAILURE;
 }
 
-int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct user_param *params)
+int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct rdma_param *params)
 {
     assert(params->qp_num > 0);
     ctx->qp_num = params->qp_num;
@@ -44,17 +44,17 @@ int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct user_param *pa
     if (unlikely(!ctx->qps))
     {
         log_error("Error, allocate qps failure\n");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
     for (size_t i = 0; i < ctx->qp_num; i++)
     {
-        if (unlikely(init_rc_qp_srq_unsignaled(ctx, &(ctx->qps[i]), UINT8_MAX) == FAILURE))
+        if (unlikely(init_rc_qp_srq_unsignaled(ctx, &(ctx->qps[i]), UINT8_MAX) == RDMA_FAILURE))
         {
             log_error("Error, allocate the %lu th qp", i);
-            return FAILURE;
+            return RDMA_FAILURE;
         }
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 
 int modify_qp_init_verbose(struct ibv_qp *qp, uint8_t l_ib_port)
@@ -72,9 +72,9 @@ int modify_qp_init_verbose(struct ibv_qp *qp, uint8_t l_ib_port)
     if (unlikely(ret != 0))
     {
         log_error("Failed to modify qp to INIT.");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 
 int modify_qp_init(struct ibv_qp *qp, struct ib_res *local_res)
@@ -117,9 +117,9 @@ int modify_qp_init_to_rtr_verbose(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t
     if (unlikely(ret != 0))
     {
         log_error("Failed to change qp to rtr");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 
 int modify_qp_init_to_rtr_qp_num_idx(struct ibv_qp *qp, struct ib_res *local_res, struct ib_res *remote_res,
@@ -154,9 +154,9 @@ int modify_qp_rtr_to_rts_verbose(struct ibv_qp *qp, uint32_t l_psn)
     if (unlikely(ret != 0))
     {
         log_error("Failed to change qp to rts");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 
 int modify_qp_rtr_to_rts(struct ibv_qp *qp, struct ib_res *local_res)
@@ -168,19 +168,19 @@ int modify_qp_init_to_rts(struct ibv_qp *qp, struct ib_res *local_res, struct ib
 {
     int ret = 0;
     ret = modify_qp_init(qp, local_res);
-    if (unlikely(ret != SUCCESS))
+    if (unlikely(ret != RDMA_SUCCESS))
     {
-        return FAILURE;
+        return RDMA_FAILURE;
     }
     ret = modify_qp_init_to_rtr_qp_num(qp, local_res, remote_res, r_qp_num);
-    if (unlikely(ret != SUCCESS))
+    if (unlikely(ret != RDMA_SUCCESS))
     {
-        return FAILURE;
+        return RDMA_FAILURE;
     }
     ret = modify_qp_rtr_to_rts(qp, local_res);
-    if (unlikely(ret != SUCCESS))
+    if (unlikely(ret != RDMA_SUCCESS))
     {
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }

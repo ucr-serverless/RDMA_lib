@@ -11,6 +11,6 @@
 int register_local_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr);
 int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr);
 
-int register_multiple_mr(struct ib_ctx *ctx, struct user_param *params, void **buffers);
+int register_multiple_mr(struct ib_ctx *ctx, struct rdma_param *params, void **buffers);
 
 #endif // MR_H_

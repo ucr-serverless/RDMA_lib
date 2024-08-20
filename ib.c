@@ -15,7 +15,7 @@
 #include "sock.h"
 #include "utils.h"
 
-int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
+int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **buffers)
 {
     int num_of_device;
     struct ibv_device **dev_list;
@@ -123,13 +123,13 @@ int init_ib_ctx(struct ib_ctx *ctx, struct user_param *params, void **buffers)
         goto error;
     }
 
-    if (unlikely(init_multiple_rc_qp_srq_unsignaled(ctx, params) == FAILURE))
+    if (unlikely(init_multiple_rc_qp_srq_unsignaled(ctx, params) == RDMA_FAILURE))
     {
         log_error("Error, init multiple qps\n");
         goto error;
     }
 
-    if (unlikely(register_multiple_mr(ctx, params, buffers) == FAILURE))
+    if (unlikely(register_multiple_mr(ctx, params, buffers) == RDMA_FAILURE))
     {
         log_error("Error, register mrs\n");
         goto error;
@@ -270,7 +270,7 @@ int send_ib_res(struct ib_res *res, int sock_fd)
         }
     }
 
-    return SUCCESS;
+    return RDMA_SUCCESS;
 
 error:
     exit(1);
@@ -319,7 +319,7 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
 
     res->mrs = mrs;
 
-    return SUCCESS;
+    return RDMA_SUCCESS;
 error:
     exit(1);
 }
@@ -386,10 +386,10 @@ int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, ui
         if (unlikely(ret != 0))
         {
             log_error("Error, pre post srq requests fail\n");
-            return FAILURE;
+            return RDMA_FAILURE;
         }
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
                uint32_t rkey, int send_flag)

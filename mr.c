@@ -10,9 +10,9 @@ int register_local_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_m
     if (unlikely(!(*mr)))
     {
         log_error("register local memory region fail");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr)
 {
@@ -21,12 +21,12 @@ int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_
     if (unlikely(!(*mr)))
     {
         log_error("register remote memory region fail");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }
 
-int register_multiple_mr(struct ib_ctx *ctx, struct user_param *params, void **buffers)
+int register_multiple_mr(struct ib_ctx *ctx, struct rdma_param *params, void **buffers)
 {
     assert(params->mr_num > 0);
     assert(params->mr_num < ctx->device_attr.max_mr);
@@ -37,7 +37,7 @@ int register_multiple_mr(struct ib_ctx *ctx, struct user_param *params, void **b
     if (unlikely(!ctx->buffers))
     {
         log_error("Error, buffers not passed\n");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
 
     ctx->mrs = (struct ibv_mr **)calloc(ctx->mr_num, sizeof(struct ibv_mr *));
@@ -45,7 +45,7 @@ int register_multiple_mr(struct ib_ctx *ctx, struct user_param *params, void **b
     if (unlikely(!ctx->mrs))
     {
         log_error("Error, allocate mrs failure\n");
-        return FAILURE;
+        return RDMA_FAILURE;
     }
 
     for (size_t i = 0; i < ctx->mr_num; i++)
@@ -53,13 +53,13 @@ int register_multiple_mr(struct ib_ctx *ctx, struct user_param *params, void **b
         if (!ctx->buffers[i])
         {
             log_error("Error, buffer %lu is NULL\n", i);
-            return FAILURE;
+            return RDMA_FAILURE;
         }
-        if (unlikely(register_remote_mr(ctx->pd, ctx->buffers[i], ctx->bf_size, &(ctx->mrs[i])) == FAILURE))
+        if (unlikely(register_remote_mr(ctx->pd, ctx->buffers[i], ctx->bf_size, &(ctx->mrs[i])) == RDMA_FAILURE))
         {
             log_error("Error, register mr fail\n");
-            return FAILURE;
+            return RDMA_FAILURE;
         }
     }
-    return SUCCESS;
+    return RDMA_SUCCESS;
 }

@@ -2,7 +2,6 @@
 #define QP_H_
 
 #include "config.h"
-#include "debug.h"
 #include "ib.h"
 #include "mr.h"
 #include "utils.h"
@@ -16,7 +15,7 @@
 
 int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t max_send_wr);
 
-int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct user_param *params);
+int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct rdma_param *params);
 
 int modify_qp_init(struct ibv_qp *qp, struct ib_res *local_res);
 
