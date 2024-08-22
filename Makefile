@@ -15,7 +15,7 @@ endif
 
 
 CFLAGS += -Wall -Werror  -O3
-INCLUDES = -I./ -I./test/unity -I./perf -I./include
+INCLUDES = -I./ -I./test/unity -I./perf -I./include -I./utils
 LDFLAGS += -libverbs
 LIBS=-pthread
 
@@ -25,8 +25,9 @@ PERF_DIR=perf
 UNITY_DIR=test/unity
 BIN_DIR=bin
 EXAMPLE_DIR=examples
+UTILS_DIR=utils
 
-SRC_FILES = $(wildcard *.c)
+SRC_FILES = $(wildcard *.c) $(wildcard $(UTILS_DIR)/*c)
 EXAMPLE_FILES = $(wildcard $(EXAMPLE_DIR)/*.c)
 TEST_FILES = $(wildcard $(TEST_DIR)/*.c)
 PERF_FILES = $(wildcard $(PERF_DIR)/*.c)
@@ -41,8 +42,13 @@ UNITY_OBJS=$(UNITY_FILES:.c=.o)
 PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
+LIB_NAME = libRDMA_lib.a
 
-all: clean $(PROG) $(TEST_EXEC)
+
+all: clean $(PROG) $(TEST_EXEC) $(LIB_NAME)
+
+$(LIB_NAME): $(SRC_OBJS)
+	$(AR) rcs $@ $(SRC_OBJS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
@@ -67,7 +73,7 @@ $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 
 .PHONY: clean format bear debug
 clean:
-	$(RM) *.o $(TEST_DIR)/*.o $(UNITY_DIR)/*.o $(PERF_DIR)/*.o $(EXAMPLE_DIR)/*.o *~ $(BIN_DIR)/* compile_commands.json *.log
+	$(RM) *.o $(TEST_DIR)/*.o $(UNITY_DIR)/*.o $(PERF_DIR)/*.o $(EXAMPLE_DIR)/*.o *~ $(BIN_DIR)/* compile_commands.json *.log $(LIB_NAME)
 
 format:
 	@ clang-format -i $(TEST_DIR)/*.c  $(PERF_FILES) $(PERF_DIR)/*.h $(SRC_FILES) *.h $(EXAMPLE_FILES)
