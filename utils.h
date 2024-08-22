@@ -17,6 +17,5 @@
 #define unlikely(x) (!!(x))
 #endif // !USE_RTE_MEMPOOL
 
-
 void print_ibv_gid(union ibv_gid gid);
 #endif /* UTILS_H_ */

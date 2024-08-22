@@ -134,7 +134,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         if (unlikely(register_multiple_local_mr(ctx, local_buffers, params->local_mr_size, params->local_mr_num,
                                                 &ctx->local_mrs) == RDMA_FAILURE))
         {
-            log_error("Error, register mrs\n");
+            log_error("Error, register local mrs\n");
             goto error;
         }
 
@@ -145,7 +145,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         if (unlikely(register_multiple_remote_mr(ctx, remote_buffers, params->remote_mr_size, params->remote_mr_num,
                                                  &ctx->remote_mrs) == RDMA_FAILURE))
         {
-            log_error("Error, register mrs\n");
+            log_error("Error, register remote mrs\n");
             goto error;
         }
 
@@ -252,12 +252,12 @@ void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 
     res->mrs = mrs;
 
-    for (size_t i = 0; i < ctx->qp_num; i++)
+    for (size_t i = 0; i < res->qp_num; i++)
     {
         res->qp_nums[i] = ctx->qps[i]->qp_num;
     }
 
-    for (size_t i = 0; i < ctx->remote_mrs_num; i++)
+    for (size_t i = 0; i < res->mr_num; i++)
     {
         res->mrs[i].length = ctx->remote_mrs[i]->length;
         res->mrs[i].lkey = ctx->remote_mrs[i]->lkey;
@@ -348,15 +348,27 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
 
     return RDMA_SUCCESS;
 error:
-    exit(1);
+    destroy_ib_res(res);
+    log_error("Error, recv remote ib res");
+    return RDMA_FAILURE;
 }
 
 void destroy_ib_res(struct ib_res *res)
 {
     if (res)
     {
-        free(res->qp_nums);
-        free(res->mrs);
+        if (res->qp_nums)
+        {
+
+            free(res->qp_nums);
+            res->qp_nums = NULL;
+        }
+        if (res->mrs)
+        {
+
+            free(res->mrs);
+            res->mrs = NULL;
+        }
     }
 }
 

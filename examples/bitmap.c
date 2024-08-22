@@ -64,7 +64,9 @@ void bitmap_deallocate(bitmap *b)
 {
     // error-checking should be better :-)
     free(b->array);
+    b->array = NULL;
     free(b);
+    b = NULL;
 }
 
 void bitmap_print_hex(bitmap *b)

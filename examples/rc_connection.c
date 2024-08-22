@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     {
         buffers[i] = buf + i * params.remote_mr_size;
     }
-    init_ib_ctx(&ctx, &params, buffers, NULL);
+    init_ib_ctx(&ctx, &params, NULL, buffers);
     printf("Hello, World!\n");
 
     int self_fd = 0;
@@ -182,6 +182,7 @@ int main(int argc, char *argv[])
 
         close(self_fd);
         close(peer_fd);
+        bitmap_deallocate(bp);
     }
     else
     {
@@ -213,6 +214,8 @@ int main(int argc, char *argv[])
 
     printf("finished setup connection\n");
 
+    destroy_ib_res((&local_res));
+    destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);
     free(buf);
     free(buffers);

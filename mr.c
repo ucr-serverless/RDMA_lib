@@ -32,6 +32,7 @@ int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size,
 {
     assert(buffer_size > 0);
     assert(buffers_len > 0);
+    int ret = 0;
     if (unlikely(!buffers))
     {
         log_error("Error, buffers not passed\n");
@@ -53,7 +54,15 @@ int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size,
             log_error("Error, buffer %lu is NULL\n", i);
             return RDMA_FAILURE;
         }
-        if (unlikely(register_remote_mr(ctx->pd, buffers[i], buffer_size, &((*mr_list)[i])) == RDMA_FAILURE))
+        if (is_local_buffer)
+        {
+            ret = register_local_mr(ctx->pd, buffers[i], buffer_size, &((*mr_list)[i]));
+        }
+        else
+        {
+            ret = register_remote_mr(ctx->pd, buffers[i], buffer_size, &((*mr_list)[i]));
+        }
+        if (unlikely(ret == RDMA_FAILURE))
         {
             log_error("Error, register mr fail\n");
             return RDMA_FAILURE;
