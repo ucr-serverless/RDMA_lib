@@ -65,7 +65,7 @@ struct ib_res
     uint8_t ib_port;
 } __attribute__((packed));
 
-void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res);
+int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res);
 // the local ib_res should be initialized first
 int send_ib_res(struct ib_res *local_ib_res, int sock_fd);
 int recv_ib_res(struct ib_res *remote_ib_res, int sock_fd);

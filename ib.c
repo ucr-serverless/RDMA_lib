@@ -223,7 +223,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     }
 }
 
-void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
+int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 {
 
     res->gid = ctx->gid;
@@ -264,10 +264,10 @@ void init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
         res->mrs[i].rkey = ctx->remote_mrs[i]->rkey;
         res->mrs[i].addr = ctx->remote_mrs[i]->addr;
     }
-    return;
+    return RDMA_SUCCESS;
 error:
     log_error("init local ib res failed\n");
-    exit(1);
+    return RDMA_FAILURE;
 }
 
 int send_ib_res(struct ib_res *res, int sock_fd)
