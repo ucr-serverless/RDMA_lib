@@ -58,8 +58,8 @@ struct ib_res
     struct mr_info *mrs;
     uint32_t *qp_nums;
     uint32_t psn;
-    uint32_t mr_num;
-    uint32_t qp_num;
+    uint32_t n_mr;
+    uint32_t n_qp;
     uint16_t lid;
     uint8_t sgid_idx;
     uint8_t ib_port;

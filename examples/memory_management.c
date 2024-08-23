@@ -156,7 +156,7 @@ int remote_addr_convert_slot_idx(void *remote_addr, uint32_t remote_len, struct 
 int qp_num_to_idx(struct ib_res *res, uint32_t qp_num, uint32_t *idx)
 {
     size_t i = 0;
-    for (; i < res->qp_num; i++)
+    for (; i < res->n_qp; i++)
     {
         if (res->qp_nums[i] == qp_num)
         {

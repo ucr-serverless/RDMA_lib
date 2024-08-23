@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 #ifdef DEBUG
 
     printf("remote qp_nums\n");
-    for (size_t i = 0; i < remote_res.qp_num; i++)
+    for (size_t i = 0; i < remote_res.n_qp; i++)
     {
         printf("%d\n", remote_res.qp_nums[i]);
     }
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
         printf("%d\n", local_res.qp_nums[i]);
     }
     printf("remote mr info\n\n");
-    for (size_t i = 0; i < remote_res.mr_num; i++)
+    for (size_t i = 0; i < remote_res.n_mr; i++)
     {
         printf("mr length %lu\n", remote_res.mrs[i].length);
         printf("mr addrs %p\n", remote_res.mrs[i].addr);

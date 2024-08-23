@@ -228,13 +228,13 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 
     res->gid = ctx->gid;
     res->psn = 0;
-    res->mr_num = ctx->remote_mrs_num;
-    res->qp_num = ctx->qp_num;
+    res->n_mr = ctx->remote_mrs_num;
+    res->n_qp = ctx->qp_num;
     res->lid = ctx->lid;
     res->sgid_idx = ctx->sgid_idx;
     res->ib_port = ctx->ib_port;
 
-    uint32_t *qp_nums = (uint32_t *)calloc(res->qp_num, sizeof(uint32_t));
+    uint32_t *qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
     if (!qp_nums)
     {
         log_error("Error, fail to allocate mem for qps");
@@ -243,7 +243,7 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 
     res->qp_nums = qp_nums;
 
-    struct mr_info *mrs = (struct mr_info *)calloc(res->mr_num, sizeof(struct mr_info));
+    struct mr_info *mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
     if (!mrs)
     {
         log_error("Error, fail to allocate mem for mrs");
@@ -252,12 +252,12 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 
     res->mrs = mrs;
 
-    for (size_t i = 0; i < res->qp_num; i++)
+    for (size_t i = 0; i < res->n_qp; i++)
     {
         res->qp_nums[i] = ctx->qps[i]->qp_num;
     }
 
-    for (size_t i = 0; i < res->mr_num; i++)
+    for (size_t i = 0; i < res->n_mr; i++)
     {
         res->mrs[i].length = ctx->remote_mrs[i]->length;
         res->mrs[i].lkey = ctx->remote_mrs[i]->lkey;
@@ -277,7 +277,7 @@ int send_ib_res(struct ib_res *res, int sock_fd)
         log_error("Error, Send ib res\n");
         goto error;
     }
-    for (size_t i = 0; i < res->qp_num; i++)
+    for (size_t i = 0; i < res->n_qp; i++)
     {
 
         if (sock_write(sock_fd, &(res->qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
@@ -287,7 +287,7 @@ int send_ib_res(struct ib_res *res, int sock_fd)
         }
     }
 
-    for (size_t i = 0; i < res->mr_num; i++)
+    for (size_t i = 0; i < res->n_mr; i++)
     {
 
         if (sock_write(sock_fd, &(res->mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
@@ -310,19 +310,19 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
         log_error("Error, recv ib res\n");
         goto error;
     }
-    uint32_t *qp_nums = (uint32_t *)calloc(res->qp_num, sizeof(uint32_t));
+    uint32_t *qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
     if (!qp_nums)
     {
         log_error("Error, fail to allocate mem for qps");
         goto error;
     }
-    struct mr_info *mrs = (struct mr_info *)calloc(res->mr_num, sizeof(struct mr_info));
+    struct mr_info *mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
     if (!mrs)
     {
         log_error("Error, fail to allocate mem for mrs");
         goto error;
     }
-    for (size_t i = 0; i < res->qp_num; i++)
+    for (size_t i = 0; i < res->n_qp; i++)
     {
 
         if (sock_read(sock_fd, &(qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
@@ -334,7 +334,7 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
 
     res->qp_nums = qp_nums;
 
-    for (size_t i = 0; i < res->mr_num; i++)
+    for (size_t i = 0; i < res->n_mr; i++)
     {
 
         if (sock_read(sock_fd, &(mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
