@@ -69,6 +69,13 @@ int main(int argc, char *argv[])
         buffers[i] = buf + i * params.remote_mr_size;
     }
     init_ib_ctx(&ctx, &params, NULL, buffers);
+
+#ifdef DEBUG
+
+    printf("max_mr: %d\n", ctx.device_attr.max_mr);
+    printf("max_mr_size: %lu\n", ctx.device_attr.max_mr_size);
+    printf("page_size_cap: %lu\n", ctx.device_attr.page_size_cap);
+#endif
     printf("Hello, World!\n");
 
     int self_fd = 0;
