@@ -88,6 +88,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
     {
         ctx->send_cq = ibv_create_cq(ctx->context, params->init_cqe_num, NULL, ctx->send_channel, 0);
         params->init_cqe_num /= 2;
+        retry_cnt++;
     } while (!ctx->send_cq && retry_cnt < RETRY_MAX);
     if (unlikely(!(ctx->send_cq)))
     {
@@ -102,6 +103,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
     {
         ctx->recv_cq = ibv_create_cq(ctx->context, params->init_cqe_num, NULL, NULL, 0);
         params->init_cqe_num /= 2;
+        retry_cnt++;
     } while (!ctx->send_cq && retry_cnt < RETRY_MAX);
     if (unlikely(!(ctx->recv_cq)))
     {
