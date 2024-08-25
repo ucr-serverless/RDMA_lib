@@ -172,6 +172,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
             }
         }
         free(ctx->remote_mrs);
+        ctx->remote_mrs = NULL;
     }
 
     if (ctx->local_mrs)
@@ -184,6 +185,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
             }
         }
         free(ctx->local_mrs);
+        ctx->local_mrs = NULL;
     }
     if (ctx->qps)
     {
@@ -195,31 +197,38 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
             }
         }
         free(ctx->qps);
+        ctx->qps = NULL;
     }
     if (ctx->send_channel)
     {
         ibv_destroy_comp_channel(ctx->send_channel);
+        ctx->send_channel = NULL;
     }
     if (ctx->send_cq)
     {
         ibv_destroy_cq(ctx->send_cq);
+        ctx->send_cq = NULL;
     }
     if (ctx->recv_cq)
     {
         ibv_destroy_cq(ctx->recv_cq);
+        ctx->recv_cq = NULL;
     }
     if (ctx->srq)
     {
         ibv_destroy_srq(ctx->srq);
+        ctx->srq = NULL;
     }
     if (ctx->pd != NULL)
     {
         ibv_dealloc_pd(ctx->pd);
+        ctx->pd = NULL;
     }
 
     if (ctx->context != NULL)
     {
         ibv_close_device(ctx->context);
+        ctx->context = NULL;
     }
 }
 
