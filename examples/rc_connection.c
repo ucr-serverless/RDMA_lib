@@ -187,6 +187,9 @@ int main(int argc, char *argv[])
         bitmap_clear_consecutive(bp, slot, slot_num);
         bitmap_print_bit(bp);
 
+        modify_qp_to_error(ctx.qps[0]);
+        modify_qp_to_reset(ctx.qps[0]);
+        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[1]);
         close(self_fd);
         close(peer_fd);
         bitmap_deallocate(bp);
@@ -215,6 +218,9 @@ int main(int argc, char *argv[])
         printf("received addr: %p\n", addr);
         printf("received content: %c\n", *(char *)addr);
         send_release_signal(peer_fd, addr, wc.byte_len);
+        modify_qp_to_error(ctx.qps[0]);
+        modify_qp_to_reset(ctx.qps[0]);
+        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[1]);
 
         close(peer_fd);
     }

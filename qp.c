@@ -184,3 +184,35 @@ int modify_qp_init_to_rts(struct ibv_qp *qp, struct ib_res *local_res, struct ib
     }
     return RDMA_SUCCESS;
 }
+
+int modify_qp_to_error(struct ibv_qp *qp)
+{
+    int ret = 0;
+    struct ibv_qp_attr qp_attr = {
+        .qp_state = IBV_QPS_ERR,
+    };
+
+    ret = ibv_modify_qp(qp, &qp_attr, IBV_QP_STATE);
+    if (unlikely(ret != 0))
+    {
+        log_error("Failed to change qp to error");
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
+
+int modify_qp_to_reset(struct ibv_qp *qp)
+{
+    int ret = 0;
+    struct ibv_qp_attr qp_attr = {
+        .qp_state = IBV_QPS_RESET,
+    };
+
+    ret = ibv_modify_qp(qp, &qp_attr, IBV_QP_STATE);
+    if (unlikely(ret != 0))
+    {
+        log_error("Failed to change qp to reset");
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
