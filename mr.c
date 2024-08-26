@@ -27,11 +27,11 @@ int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_
     return RDMA_SUCCESS;
 }
 
-int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t n_buffer,
                          bool is_local_buffer, struct ibv_mr ***mr_list)
 {
     assert(buffer_size > 0);
-    assert(buffers_len > 0);
+    assert(n_buffer > 0);
     int ret = 0;
     if (unlikely(!buffers))
     {
@@ -39,7 +39,7 @@ int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size,
         return RDMA_FAILURE;
     }
 
-    *mr_list = (struct ibv_mr **)calloc(ctx->remote_mrs_num, sizeof(struct ibv_mr *));
+    *mr_list = (struct ibv_mr **)calloc(n_buffer, sizeof(struct ibv_mr *));
 
     if (unlikely(!(*mr_list)))
     {
@@ -47,7 +47,7 @@ int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size,
         return RDMA_FAILURE;
     }
 
-    for (size_t i = 0; i < buffers_len; i++)
+    for (size_t i = 0; i < n_buffer; i++)
     {
         if (!buffers[i])
         {
@@ -71,14 +71,14 @@ int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size,
     return RDMA_SUCCESS;
 }
 
-int register_multiple_remote_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+int register_multiple_remote_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t n_buffer,
                                 struct ibv_mr ***mr_list)
 {
-    return register_multiple_mr(ctx, buffers, buffer_size, buffers_len, false, mr_list);
+    return register_multiple_mr(ctx, buffers, buffer_size, n_buffer, false, mr_list);
 }
 
-int register_multiple_local_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t buffers_len,
+int register_multiple_local_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t n_buffer,
                                struct ibv_mr ***mr_list)
 {
-    return register_multiple_mr(ctx, buffers, buffer_size, buffers_len, true, mr_list);
+    return register_multiple_mr(ctx, buffers, buffer_size, n_buffer, true, mr_list);
 }
