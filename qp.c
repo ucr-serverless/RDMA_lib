@@ -103,7 +103,7 @@ int modify_qp_init_to_rtr_verbose(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t
 
     if (qp_attr.ah_attr.dlid == 0)
     {
-        log_info("Using RoCEv2 transport\n");
+        log_debug("Using RoCEv2 transport\n");
         qp_attr.ah_attr.is_global = 1; // grh should be configured for RoCEv2
         qp_attr.ah_attr.grh.sgid_index = l_sgid_index;
         qp_attr.ah_attr.grh.dgid = r_gid;
