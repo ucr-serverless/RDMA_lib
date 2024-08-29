@@ -85,9 +85,9 @@ int post_write_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct
 int post_write_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
                           uint64_t raddr, uint32_t rkey);
 
-int post_write_imm_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                             uint64_t raddr, uint32_t rkey, uint32_t imm_data);
 
-int post_write_imm_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_unsignaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data);
 #endif /*ib.h*/

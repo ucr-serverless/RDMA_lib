@@ -498,13 +498,13 @@ int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_
     return ret;
 }
 
-int post_write_imm_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                             uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, IBV_SEND_SIGNALED);
 }
 
-int post_write_imm_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_unsignaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, 0);
