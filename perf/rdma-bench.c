@@ -15,7 +15,7 @@
 #include <rte_eal.h>
 #include <rte_errno.h>
 #endif /* ifdef USE_RTE_MEMPOOL */
-extern FILE *log_fp;
+FILE *log_fp;
 
 int init_env(struct ConfigInfo *config_info);
 void destroy_env();
