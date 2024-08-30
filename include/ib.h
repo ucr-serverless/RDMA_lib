@@ -79,6 +79,7 @@ int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_s
 int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                            uint32_t num);
 
+int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id);
 int post_write_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
                         uint32_t rkey);
 

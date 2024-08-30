@@ -426,6 +426,18 @@ int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_s
 
     return ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
 }
+
+int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id)
+{
+    int ret = 0;
+    ret = post_srq_recv(buf_size, lkey, wr_id, srq, buf);
+    if (unlikely(ret != 0))
+    {
+        log_error("Error, pre post srq requests fail\n");
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
 int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                            uint32_t num)
 {

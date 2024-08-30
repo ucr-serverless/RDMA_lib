@@ -27,8 +27,8 @@ int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_
     return RDMA_SUCCESS;
 }
 
-int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t n_buffer,
-                         bool is_local_buffer, struct ibv_mr ***mr_list)
+int register_multiple_mr(struct ib_ctx *ctx, void **buffers, size_t buffer_size, size_t n_buffer, bool is_local_buffer,
+                         struct ibv_mr ***mr_list)
 {
     assert(buffer_size > 0);
     assert(n_buffer > 0);
