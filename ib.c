@@ -482,7 +482,7 @@ int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, ui
     int ret = 0;
     for (size_t i = 0; i < num; i++)
     {
-        ret = post_srq_recv(req_size, lkey, wr_id, srq, buf);
+        ret = post_srq_recv(req_size, lkey, i, srq, buf);
         if (unlikely(ret != 0))
         {
             log_error("Error, pre post srq requests fail\n");
