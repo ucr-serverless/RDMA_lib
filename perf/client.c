@@ -404,7 +404,7 @@ void *client_thread_write_imm_signaled(void *arg)
     while (!stop)
     {
         ret = post_write_imm_signaled(*qp, buf_ptr, msg_size, lkey, 0, rptr, rkey, 0);
-        if (unlikely(ret != 0))
+        if (unlikely(ret != RDMA_SUCCESS))
         {
             log_error("send write imme_data failed, error ret: %d", ret);
             goto error;

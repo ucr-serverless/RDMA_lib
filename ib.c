@@ -117,8 +117,15 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
     struct ibv_srq_init_attr attr = {.attr = {/* when using sreq, rx_depth sets the max_wr */
                                               .max_wr = ctx->device_attr.max_srq_wr - 1,
                                               .max_sge = 1}};
+    retry_cnt = 0;
 
-    ctx->srq = ibv_create_srq(ctx->pd, &attr);
+    do
+    {
+        ctx->srq = ibv_create_srq(ctx->pd, &attr);
+        attr.attr.max_wr /= 2;
+        retry_cnt++;
+    } while (!ctx->srq && retry_cnt < RETRY_MAX);
+
     if (unlikely(!(ctx->srq)))
     {
         log_error("Error, ibv_cratee_srq() failed\n");
@@ -153,6 +160,21 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
         ctx->remote_mrs_num = params->remote_mr_num;
     }
+
+    ctx->send_wc = (struct ibv_wc *)calloc(params->n_send_wc, sizeof(struct ibv_wc));
+
+    if (unlikely(ctx->send_wc == NULL)) {
+        log_error("Error, allocate send wc fail");
+        goto error;
+    }
+
+    ctx->recv_wc = (struct ibv_wc *)calloc(params->n_recv_wc, sizeof(struct ibv_wc));
+
+    if (unlikely(ctx->recv_wc == NULL)) {
+        log_error("Error, allocate recv wc fail");
+        goto error;
+    }
+
     ibv_free_device_list(dev_list);
     return RDMA_SUCCESS;
 error:
@@ -231,6 +253,16 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     {
         ibv_close_device(ctx->context);
         ctx->context = NULL;
+    }
+    if (ctx->send_wc)
+    {
+        free(ctx->send_wc);
+        ctx->send_wc = NULL;
+    }
+    if (ctx->recv_wc)
+    {
+        free(ctx->recv_wc);
+        ctx->recv_wc = NULL;
     }
 }
 
@@ -399,7 +431,10 @@ int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_dat
                                   .imm_data = htonl(imm_data)};
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    return ret;
+    if (ret != 0) {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
 }
 
 int post_send_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
@@ -472,7 +507,10 @@ int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *
     };
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    return ret;
+    if (ret != 0) {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
 }
 
 int post_write_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
@@ -507,7 +545,10 @@ int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_
     };
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    return ret;
+    if (ret != 0) {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
 }
 
 int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,

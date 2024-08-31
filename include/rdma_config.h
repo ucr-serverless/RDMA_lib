@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define RETRY_MAX 5
+#define RETRY_MAX 10
 struct rdma_param
 {
     uint32_t device_idx;
@@ -18,6 +18,8 @@ struct rdma_param
     uint8_t ib_port;
     uint32_t init_cqe_num;
     void *extras;
+    uint32_t n_send_wc;
+    uint32_t n_recv_wc;
 };
 
 enum rdma_status

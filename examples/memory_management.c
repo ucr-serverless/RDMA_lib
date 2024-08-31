@@ -168,7 +168,7 @@ int qp_num_to_idx(struct ib_res *res, uint32_t qp_num, uint32_t *idx)
     return RDMA_FAILURE;
 }
 
-int local_slot_idx_convert(struct ib_res *local_res, uint32_t local_qp_num, uint32_t slot_idx, uint32_t mr_info_num,
+int slot_idx_to_addr(struct ib_res *local_res, uint32_t local_qp_num, uint32_t slot_idx, uint32_t mr_info_num,
                            uint32_t blk_size, void **addr)
 {
     uint32_t idx = 0;

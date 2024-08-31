@@ -1,3 +1,4 @@
+#include "rdma_config.h"
 #include <libconfig.h>
 #define _GNU_SOURCE
 #include <stdbool.h>
@@ -59,7 +60,7 @@ void *server_thread_write_signaled(void *arg)
     printf("signal the client to start...\n");
 
     ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, qp[0], buf_base);
-    if (unlikely(ret != 0))
+    if (unlikely(ret != RDMA_SUCCESS))
     {
         log_error("post start fail");
         goto error;

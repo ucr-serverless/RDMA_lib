@@ -16,7 +16,7 @@ int remote_addr_convert_slot_idx(void *remote_addr, uint32_t remote_len, struct 
 
 int qp_num_to_idx(struct ib_res * res, uint32_t qp_num, uint32_t *idx);
 
-int local_slot_idx_convert(struct ib_res *local_res, uint32_t local_qp_num, uint32_t slot_idx, uint32_t mr_info_num,  uint32_t blk_size, void **addr);
+int slot_idx_to_addr(struct ib_res *local_res, uint32_t local_qp_num, uint32_t slot_idx, uint32_t mr_info_num,  uint32_t blk_size, void **addr);
 
 uint32_t memory_len_to_slot_len(uint32_t len, uint32_t slot_size);
 

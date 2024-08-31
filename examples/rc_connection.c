@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
         printf("optcode: %d\n", wc.opcode);
         printf("qp_num: %d\n", wc.qp_num);
         void *addr;
-        local_slot_idx_convert(&local_res, wc.qp_num, slot_idx, ctx.remote_mrs_num / ctx.qp_num, blk_size, &addr);
+        slot_idx_to_addr(&local_res, wc.qp_num, slot_idx, ctx.remote_mrs_num / ctx.qp_num, blk_size, &addr);
         printf("received addr: %p\n", addr);
         printf("received content: %c\n", *(char *)addr);
         send_release_signal(peer_fd, addr, wc.byte_len);
