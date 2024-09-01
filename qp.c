@@ -15,7 +15,7 @@ int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t m
         .srq = ctx->srq,
         .cap =
             {
-                .max_send_wr = MIN(max_send_wr, ctx->device_attr.max_qp_wr - 1),
+                .max_send_wr = max_send_wr,
                 .max_recv_wr = 64,
                 .max_send_sge = 1,
                 .max_recv_sge = 1,
@@ -27,7 +27,7 @@ int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t m
     *qp = ibv_create_qp(ctx->pd, &qp_init_attr);
     if (unlikely(!(*qp)))
     {
-        log_error("Error init qp, current max_send_wr: %d", MIN(max_send_wr, ctx->device_attr.max_qp_wr - 1));
+        log_error("Error init qp, current max_send_wr: %d", max_send_wr);
         goto error;
     }
 
@@ -48,12 +48,15 @@ int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct rdma_param *pa
     }
     for (size_t i = 0; i < ctx->qp_num; i++)
     {
-        if (unlikely(init_rc_qp_srq_unsignaled(ctx, &(ctx->qps[i]), UINT8_MAX) == RDMA_FAILURE))
+        if (unlikely(init_rc_qp_srq_unsignaled(ctx, &(ctx->qps[i]),
+                                               MIN(params->max_send_wr, ctx->device_attr.max_qp_wr - 1)) ==
+                     RDMA_FAILURE))
         {
             log_error("Error, allocate the %lu th qp", i);
             return RDMA_FAILURE;
         }
     }
+    ctx->max_send_wr = MIN(params->max_send_wr, ctx->device_attr.max_qp_wr - 1);
     return RDMA_SUCCESS;
 }
 

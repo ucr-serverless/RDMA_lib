@@ -98,7 +98,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
     }
 
     ctx->send_cqe = ctx->send_cq->cqe;
-    
+
     init_cqe = params->init_cqe_num;
 
     retry_cnt = 0;
@@ -166,14 +166,16 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
     ctx->send_wc = (struct ibv_wc *)calloc(params->n_send_wc, sizeof(struct ibv_wc));
 
-    if (unlikely(ctx->send_wc == NULL)) {
+    if (unlikely(ctx->send_wc == NULL))
+    {
         log_error("Error, allocate send wc fail");
         goto error;
     }
 
     ctx->recv_wc = (struct ibv_wc *)calloc(params->n_recv_wc, sizeof(struct ibv_wc));
 
-    if (unlikely(ctx->recv_wc == NULL)) {
+    if (unlikely(ctx->recv_wc == NULL))
+    {
         log_error("Error, allocate recv wc fail");
         goto error;
     }
@@ -269,10 +271,11 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     }
 }
 
-void print_ib_res(struct ib_res* res)
+void print_ib_res(struct ib_res *res)
 {
     printf("n_mr: %u\n\n", res->n_mr);
-    for (size_t i = 0; i < res->n_mr; i++) {
+    for (size_t i = 0; i < res->n_mr; i++)
+    {
         printf("mr: %lu\n", i);
         printf("\tlength: %lu\n", res->mrs[i].length);
         printf("\tlkey: %u\n", res->mrs[i].lkey);
@@ -280,11 +283,11 @@ void print_ib_res(struct ib_res* res)
         printf("\taddr: %p\n", res->mrs[i].addr);
     }
     printf("n_qp: %u\n", res->n_mr);
-    for (size_t i = 0; i < res->n_qp; i++) {
+    for (size_t i = 0; i < res->n_qp; i++)
+    {
         printf("qp: %lu\n", i);
         printf("\tqp_num: %u\n", res->qp_nums[i]);
     }
-
 }
 
 int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
@@ -452,7 +455,8 @@ int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_dat
                                   .imm_data = htonl(imm_data)};
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
@@ -528,7 +532,8 @@ int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *
     };
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
@@ -566,7 +571,8 @@ int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_
     };
 
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;

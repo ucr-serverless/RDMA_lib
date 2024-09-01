@@ -41,6 +41,7 @@ struct ib_ctx
     struct ibv_wc *recv_wc;
     uint32_t n_send_wc;
     uint32_t n_recv_wc;
+    uint32_t max_send_wr;
 };
 
 int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers);

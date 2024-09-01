@@ -20,6 +20,7 @@ struct rdma_param
     void *extras;
     uint32_t n_send_wc;
     uint32_t n_recv_wc;
+    uint32_t max_sendqe;
 };
 
 enum rdma_status
