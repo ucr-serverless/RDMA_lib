@@ -269,6 +269,24 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     }
 }
 
+void print_ib_res(struct ib_res* res)
+{
+    printf("n_mr: %u\n\n", res->n_mr);
+    for (size_t i = 0; i < res->n_mr; i++) {
+        printf("mr: %lu\n", i);
+        printf("\tlength: %lu\n", res->mrs[i].length);
+        printf("\tlkey: %u\n", res->mrs[i].lkey);
+        printf("\trkey: %u\n", res->mrs[i].rkey);
+        printf("\taddr: %p\n", res->mrs[i].addr);
+    }
+    printf("n_qp: %u\n", res->n_mr);
+    for (size_t i = 0; i < res->n_qp; i++) {
+        printf("qp: %lu\n", i);
+        printf("\tqp_num: %u\n", res->qp_nums[i]);
+    }
+
+}
+
 int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
 {
 
