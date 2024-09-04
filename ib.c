@@ -367,7 +367,9 @@ int send_ib_res(struct ib_res *res, int sock_fd)
     return RDMA_SUCCESS;
 
 error:
-    exit(1);
+    destroy_ib_res(res);
+    log_error("Error, recv remote ib res");
+    return RDMA_FAILURE;
 }
 
 int recv_ib_res(struct ib_res *res, int sock_fd)
