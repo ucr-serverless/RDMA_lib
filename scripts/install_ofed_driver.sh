@@ -47,9 +47,9 @@ fi
 
 echo "install ofed 24.04"
 cd /mydata
-wget -O ofed.tgz https://content.mellanox.com/ofed/MLNX_OFED-24.04-0.7.0.0/MLNX_OFED_LINUX-24.04-0.7.0.0-ubuntu20.04-x86_64.tgz
+wget -O ofed.tgz https://content.mellanox.com/ofed/MLNX_OFED-24.07-0.6.1.0/MLNX_OFED_LINUX-24.07-0.6.1.0-ubuntu22.04-x86_64.tgz
 tar xvf ofed.tgz
-cd MLNX_OFED_LINUX-24.04-0.7.0.0-ubuntu20.04-x86_64
-sudo ./mlnxofedinstall --add-kernel-support
+cd MLNX_OFED_LINUX-24.07-0.6.1.0-ubuntu22.04-x86_64
+sudo ./mlnxofedinstall
 
 echo "Install ofed driver finished, failed to update firmware is OK"
