@@ -58,6 +58,9 @@ int main(int argc, char *argv[])
         .remote_mr_num = 2,
         .remote_mr_size = 2048,
         .init_cqe_num = 128,
+        .max_send_wr = 100,
+        .n_send_wc = 10,
+        .n_recv_wc = 10,
     };
 
     void **buffers = calloc(params.remote_mr_num, sizeof(void *));
