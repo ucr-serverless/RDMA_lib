@@ -464,21 +464,18 @@ int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_dat
     return RDMA_SUCCESS;
 }
 
-int post_send_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
-
-                       char *buf)
+int post_send_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data)
 
 {
     return post_send(req_size, lkey, wr_id, imm_data, qp, buf, IBV_SEND_SIGNALED);
 }
 
-int post_send_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp,
-                         char *buf)
+int post_send_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data)
 {
     return post_send(req_size, lkey, wr_id, imm_data, qp, buf, 0);
 }
 
-int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_srq *srq, char *buf)
+int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id)
 {
     struct ibv_recv_wr *bad_recv_wr;
 
@@ -492,7 +489,7 @@ int post_srq_recv(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_s
 int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id)
 {
     int ret = 0;
-    ret = post_srq_recv(buf_size, lkey, wr_id, srq, buf);
+    ret = post_srq_recv(srq, buf, buf_size, lkey, wr_id);
     if (unlikely(ret != 0))
     {
         log_error("Error, pre post srq requests fail\n");
@@ -506,7 +503,7 @@ int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, ui
     int ret = 0;
     for (size_t i = 0; i < num; i++)
     {
-        ret = post_srq_recv(req_size, lkey, i, srq, buf);
+        ret = post_srq_recv(srq, buf, req_size, lkey, i);
         if (unlikely(ret != 0))
         {
             log_error("Error, pre post srq requests fail\n");
@@ -541,14 +538,13 @@ int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *
     return RDMA_SUCCESS;
 }
 
-int post_write_signaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+int post_write_signaled(struct ibv_qp *qp, char *buf,uint32_t req_size, uint32_t lkey, uint64_t wr_id,  uint64_t raddr,
                         uint32_t rkey)
 {
     return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, IBV_SEND_SIGNALED);
 }
 
-int post_write_unsignaled(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf,
-                          uint64_t raddr, uint32_t rkey)
+int post_write_unsignaled(struct ibv_qp *qp, char *buf,uint32_t req_size, uint32_t lkey, uint64_t wr_id,  uint64_t raddr, uint32_t rkey)
 {
     return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, 0);
 }

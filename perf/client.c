@@ -57,7 +57,7 @@ void *client_thread_write_signaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -89,7 +89,7 @@ void *client_thread_write_signaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+                post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
                 if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_START))
                 {
                     start_sending = true;
@@ -108,7 +108,7 @@ void *client_thread_write_signaled(void *arg)
     bool stop = false;
     while (!stop)
     {
-        ret = post_write_signaled(msg_size, lkey, 1, *qp, buf_ptr, rptr, rkey);
+        ret = post_write_signaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
 
         while ((num_completion = ibv_poll_cq(cq, NUM_WC, wc)) == 0)
         {
@@ -151,7 +151,7 @@ void *client_thread_write_signaled(void *arg)
            throughput * msg_size, opt_count - NUM_WARMING_UP_OPS, duration);
     printf("latency: %f\n", latency);
 
-    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], ib_res->ib_buf);
+    ret = post_send_signaled(qp[0], ib_res->ib_buf, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     bool finish = false;
     while (!finish)
     {
@@ -220,7 +220,7 @@ void *client_thread_write_unsignaled(void *arg)
 
     for (int j = 0; j < 40; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -243,12 +243,12 @@ void *client_thread_write_unsignaled(void *arg)
     {
         for (int i = 0; i < signal_freq; i++)
         {
-            ret = post_write_unsignaled(msg_size, lkey, 1, *qp, buf_ptr, rptr, rkey);
+            ret = post_write_unsignaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
             roffset = (roffset + msg_size) % rsize;
             rptr = raddr + roffset;
         }
 
-        ret = post_write_signaled(msg_size, lkey, 1, *qp, buf_ptr, rptr, rkey);
+        ret = post_write_signaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
         roffset = (roffset + msg_size) % rsize;
         rptr = raddr + roffset;
 
@@ -288,7 +288,7 @@ void *client_thread_write_unsignaled(void *arg)
     printf("latency: %f for %d unsignaled operations plus a signaled operation\n", latency, signal_freq);
 
     printf("throughput (Bytes/s): %f\n", throughput);
-    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], ib_res->ib_buf);
+    ret = post_send_signaled(qp[0], ib_res->ib_buf, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     bool finish = false;
     while (!finish)
     {
@@ -351,7 +351,7 @@ void *client_thread_write_imm_signaled(void *arg)
 
     for (int j = 0; j < config_info.num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -384,7 +384,7 @@ void *client_thread_write_imm_signaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+                post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
 
                 if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_START))
                 {
@@ -435,7 +435,7 @@ void *client_thread_write_imm_signaled(void *arg)
                     stop = true;
                 }
             }
-            post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+            post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
         }
         buf_offset = (buf_offset + msg_size) % buf_size;
         buf_ptr = buf_base + buf_offset;
@@ -488,7 +488,7 @@ void *client_thread_write_imm_unsignaled(void *arg)
 
     for (int j = 0; j < config_info.num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -520,7 +520,7 @@ void *client_thread_write_imm_unsignaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, (char *)wc[i].wr_id);
+                post_srq_recv(srq, (char *)wc[i].wr_id, msg_size, lkey, wc[i].wr_id);
 
                 if (ntohl(wc[i].imm_data) == MSG_CTL_START)
                 {
@@ -591,7 +591,7 @@ void *client_thread_write_imm_unsignaled(void *arg)
     printf("latency: %f for %d unsignaled operations plus a signaled operation\n", latency, signal_freq);
     printf("throughput: %f (Bytes/s)\n", throughput);
 
-    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], buf_ptr);
+    ret = post_send_signaled(qp[0], buf_ptr, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     bool finish = false;
     while (!finish)
     {
@@ -653,7 +653,7 @@ void *client_thread_send_signaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -682,7 +682,7 @@ void *client_thread_send_signaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_ptr);
+                post_srq_recv(srq, buf_ptr, msg_size, lkey, wc[i].wr_id);
 
                 if (ntohl(wc[i].imm_data) == MSG_CTL_START)
                 {
@@ -703,7 +703,7 @@ void *client_thread_send_signaled(void *arg)
     bool stop = false;
     while (!stop)
     {
-        ret = post_send_signaled(msg_size, lkey, (uint64_t)buf_ptr, 1, *qp, buf_ptr);
+        ret = post_send_signaled(*qp, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr, 1);
         /* poll cq */
         do
         {
@@ -742,7 +742,7 @@ void *client_thread_send_signaled(void *arg)
                 if (ops_count == config_info.total_iter)
                 {
                     gettimeofday(&end, NULL);
-                    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], buf_ptr);
+                    ret = post_send_signaled(qp[0], buf_ptr, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
                 }
                 if (wc[i].wr_id == IB_WR_ID_STOP)
                 {
@@ -808,7 +808,7 @@ void *client_thread_send_unsignaled(void *arg)
 
     for (int j = 0; j < config_info.num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -840,7 +840,7 @@ void *client_thread_send_unsignaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, (char *)wc[i].wr_id);
+                post_srq_recv(srq, (char *)wc[i].wr_id, msg_size, lkey, wc[i].wr_id);
 
                 if (ntohl(wc[i].imm_data) == MSG_CTL_START)
                 {
@@ -863,12 +863,12 @@ void *client_thread_send_unsignaled(void *arg)
     {
         for (int i = 0; i < signal_freq; i++)
         {
-            ret = post_send_unsignaled(msg_size, lkey, 1, 1, *qp, buf_ptr);
+            ret = post_send_unsignaled(*qp, buf_ptr,msg_size, lkey, 1, 1);
             buf_offset = (buf_offset + msg_size) % buf_size;
             buf_ptr = buf_base + buf_offset;
         }
 
-        ret = post_send_signaled(msg_size, lkey, 1, 1, *qp, buf_ptr);
+        ret = post_send_signaled(*qp, buf_ptr, msg_size, lkey, 1, 1);
         buf_offset = (buf_offset + msg_size) % buf_size;
         buf_ptr = buf_base + buf_offset;
 
@@ -908,7 +908,7 @@ void *client_thread_send_unsignaled(void *arg)
     printf("latency: %f for %d unsignaled operations plus a signaled operation\n", latency, signal_freq);
     printf("throughput: %f (Bytes/s)\n", throughput);
 
-    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], buf_ptr);
+    ret = post_send_signaled(qp[0], buf_ptr, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     bool finish = false;
     while (!finish)
     {

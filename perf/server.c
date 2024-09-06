@@ -46,7 +46,7 @@ void *server_thread_write_signaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -59,7 +59,7 @@ void *server_thread_write_signaled(void *arg)
     /* signal the client to start */
     printf("signal the client to start...\n");
 
-    ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, qp[0], buf_base);
+    ret = post_send_signaled(qp[0], buf_base, 0, lkey, 0, MSG_CTL_START);
     if (unlikely(ret != RDMA_SUCCESS))
     {
         log_error("post start fail");
@@ -86,7 +86,7 @@ void *server_thread_write_signaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+                post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
                 if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_STOP))
                 {
                     finish = true;
@@ -127,7 +127,7 @@ void *server_thread_write_unsignaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -156,7 +156,7 @@ void *server_thread_write_unsignaled(void *arg)
             if (wc[i].opcode == IBV_WC_RECV)
             {
                 /* post a receive */
-                post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+                post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
                 if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_STOP))
                 {
                     finish = true;
@@ -203,7 +203,7 @@ void *server_thread_write_imm_signaled(void *arg)
 
     for (int j = 0; j < config_info.num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -216,7 +216,7 @@ void *server_thread_write_imm_signaled(void *arg)
     /* signal the client to start */
     printf("signal the client to start...\n");
 
-    ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, qp[0], buf_base);
+    ret = post_send_signaled(qp[0], buf_base, 0, lkey, 0, MSG_CTL_START);
     check(ret == 0, "thread: failed to signal the client to start");
 
     printf("signaled the client to start...\n");
@@ -254,13 +254,13 @@ void *server_thread_write_imm_signaled(void *arg)
                     break;
                 }
             }
-            ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+            ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
             buf_offset = (buf_offset + msg_size) % buf_size;
             buf_ptr = buf_base + buf_offset;
         }
     }
 
-    ret = post_send_signaled(0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP, qp[0], ib_res->ib_buf);
+    ret = post_send_signaled(qp[0], ib_res->ib_buf, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     check(ret == 0, "thread: failed to signal the client to stop");
 
     stop = false;
@@ -287,7 +287,7 @@ void *server_thread_write_imm_signaled(void *arg)
                     stop = true;
                 }
             }
-            ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+            ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         }
     }
 
@@ -335,7 +335,7 @@ void *server_thread_write_imm_unsignaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -345,7 +345,7 @@ void *server_thread_write_imm_unsignaled(void *arg)
         buf_ptr = buf_base + buf_offset;
     }
 
-    ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, qp[0], buf_base);
+    ret = post_send_signaled(qp[0], buf_base, 0, lkey, 0, MSG_CTL_START);
     if (unlikely(ret != 0))
     {
         log_error("thread: failed to signal the client to start");
@@ -376,7 +376,7 @@ void *server_thread_write_imm_unsignaled(void *arg)
                     finish = true;
                 }
             }
-            post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+            post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
         }
     }
     free(wc);
@@ -416,7 +416,7 @@ void *server_thread_send_signaled(void *arg)
 
     for (j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         buf_offset = (buf_offset + msg_size) % buf_size;
         buf_ptr = buf_base + buf_offset;
     }
@@ -424,7 +424,7 @@ void *server_thread_send_signaled(void *arg)
     /* signal the client to start */
     printf("signal the client to start...\n");
 
-    ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, *qp, buf_base);
+    ret = post_send_signaled(*qp, buf_base, 0, lkey, 0, MSG_CTL_START);
     check(ret == 0, "thread: failed to signal the client to start");
     log_debug("wait for client");
 
@@ -458,7 +458,7 @@ void *server_thread_send_signaled(void *arg)
                     stop = true;
                 }
             }
-            post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_ptr);
+            post_srq_recv(srq, buf_ptr, msg_size, lkey, wc[i].wr_id);
             buf_offset = (buf_offset + msg_size) % buf_size;
             buf_ptr = buf_base + buf_offset;
         }
@@ -501,7 +501,7 @@ void *server_thread_send_unsignaled(void *arg)
 
     for (int j = 0; j < num_concurr_msgs; j++)
     {
-        ret = post_srq_recv(msg_size, lkey, (uint64_t)buf_ptr, srq, buf_ptr);
+        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
         if (unlikely(ret != 0))
         {
             log_error("post shared receive request fail");
@@ -511,7 +511,7 @@ void *server_thread_send_unsignaled(void *arg)
         buf_ptr = buf_base + buf_offset;
     }
 
-    ret = post_send_signaled(0, lkey, 0, MSG_CTL_START, qp[0], buf_base);
+    ret = post_send_signaled(qp[0], buf_base, 0, lkey, 0, MSG_CTL_START);
     if (unlikely(ret != 0))
     {
         log_error("thread: failed to signal the client to start");
@@ -542,7 +542,7 @@ void *server_thread_send_unsignaled(void *arg)
                     finish = true;
                 }
             }
-            post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_base);
+            post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
         }
     }
     free(wc);
