@@ -477,20 +477,25 @@ int post_send_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32
 
 int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id)
 {
+    int ret = 0;
     struct ibv_recv_wr *bad_recv_wr;
 
     struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
 
     struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .sg_list = &list, .num_sge = 1};
 
-    return ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
+    ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
+    if (ret != 0) {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
 }
 
 int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id)
 {
     int ret = 0;
     ret = post_srq_recv(srq, buf, buf_size, lkey, wr_id);
-    if (unlikely(ret != 0))
+    if (unlikely(ret == RDMA_FAILURE))
     {
         log_error("Error, pre post srq requests fail\n");
         return RDMA_FAILURE;
