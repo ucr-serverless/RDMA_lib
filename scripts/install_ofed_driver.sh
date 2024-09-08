@@ -19,8 +19,11 @@ version=$(echo "$first_line" | grep -o 'ConnectX-[0-9]*' | sed 's/ConnectX-//')
 # Print the result
 echo "Extracted version from the first line: $version"
 echo ""
-echo "This script will install ofed driver for ubuntu20.04 on x86_64 machiens"
+echo "=================="
+echo "This script will install ofed driver for ubuntu22.04 on x86_64 machiens"
 echo "Use this script at your own risk!!"
+echo "=================="
+
 echo "For other system and platforms, refer to https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/"
 
 input=n
@@ -39,7 +42,7 @@ if [[ "$version" == "3" ]]; then
 
 fi
 
-read -p "The device is ConnectX-$version, will install ofed driver 24.04 (y/n)" input
+read -p "The device is ConnectX-$version, will install ofed driver 24.04 (y/n) " input
 if [[ "$input" != "y" ]]; then
     exit 1
 fi
