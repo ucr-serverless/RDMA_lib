@@ -124,6 +124,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
     do
     {
+        ctx->srqe = attr.attr.max_wr;
         ctx->srq = ibv_create_srq(ctx->pd, &attr);
         attr.attr.max_wr /= 2;
         retry_cnt++;
