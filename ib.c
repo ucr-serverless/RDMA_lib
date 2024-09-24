@@ -468,17 +468,15 @@ void destroy_ib_res(struct ib_res *res)
     }
 }
 
-int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data, struct ibv_qp *qp, char *buf,
-              int flag)
+int post_send_sg_list(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id,
+                      uint32_t imm_data, int flag)
 {
     int ret = 0;
     struct ibv_send_wr *bad_send_wr;
 
-    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
-
     struct ibv_send_wr send_wr = {.wr_id = wr_id,
-                                  .sg_list = &list,
-                                  .num_sge = 1,
+                                  .sg_list = sg_list,
+                                  .num_sge = sg_list_len,
                                   .opcode = IBV_WR_SEND_WITH_IMM,
                                   .send_flags = flag,
                                   .imm_data = htonl(imm_data)};
@@ -489,19 +487,54 @@ int post_send(uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_dat
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
+};
+int post_send(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data,
+              int flag)
+{
+    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    return post_send_sg_list(qp, &list, 1, wr_id, imm_data, flag);
 }
 
 int post_send_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                        uint32_t imm_data)
 
 {
-    return post_send(req_size, lkey, wr_id, imm_data, qp, buf, IBV_SEND_SIGNALED);
+    return post_send(qp, buf, req_size, lkey, wr_id, imm_data, IBV_SEND_SIGNALED);
 }
 
 int post_send_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                          uint32_t imm_data)
 {
-    return post_send(req_size, lkey, wr_id, imm_data, qp, buf, 0);
+    return post_send(qp, buf, req_size, lkey, wr_id, imm_data, 0);
+}
+
+int post_send_sg_list_signaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id,
+                               uint32_t imm_data)
+
+{
+    return post_send_sg_list(qp, sg_list, sg_list_len, wr_id, imm_data, IBV_SEND_SIGNALED);
+}
+
+int post_send_sg_list_unsignaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id,
+                                 uint32_t imm_data)
+{
+    return post_send_sg_list(qp, sg_list, sg_list_len, wr_id, imm_data, 0);
+}
+
+int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id)
+{
+    int ret = 0;
+    struct ibv_recv_wr *bad_recv_wr;
+
+    struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .sg_list = sg_list, .num_sge = sg_list_len};
+
+    ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
+    if (ret != 0)
+    {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
 }
 
 int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id)
