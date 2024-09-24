@@ -1,5 +1,6 @@
 #include "qp.h"
 #include "debug.h"
+#include "rdma_config.h"
 #include "utils.h"
 #include <infiniband/verbs.h>
 #include <stdint.h>
@@ -17,19 +18,30 @@ int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t m
             {
                 .max_send_wr = max_send_wr,
                 .max_recv_wr = 64,
-                .max_send_sge = 1,
-                .max_recv_sge = 1,
+                .max_send_sge = ctx->device_attr.max_sge,
+                .max_recv_sge = ctx->device_attr.max_sge,
             },
         .qp_type = IBV_QPT_RC,
         .sq_sig_all = 0,
     };
 
-    *qp = ibv_create_qp(ctx->pd, &qp_init_attr);
+    size_t retry_cnt = 0;
+
+    do
+    {
+        *qp = ibv_create_qp(ctx->pd, &qp_init_attr);
+        qp_init_attr.cap.max_send_sge /= 2;
+        qp_init_attr.cap.max_recv_sge /= 2;
+    } while (!(*qp) && retry_cnt < RETRY_MAX);
+
     if (unlikely(!(*qp)))
     {
-        log_error("Error init qp, current max_send_wr: %d", max_send_wr);
+        log_error("Error init qp, current max_send_wr: %d, max_send_sge: %d, max_recv_sge: %d", max_send_wr,
+                  qp_init_attr.cap.max_send_sge, qp_init_attr.cap.max_recv_sge);
         goto error;
     }
+    ctx->max_recv_sge = qp_init_attr.cap.max_recv_sge;
+    ctx->max_send_sge = qp_init_attr.cap.max_send_sge;
 
     return RDMA_SUCCESS;
 error:

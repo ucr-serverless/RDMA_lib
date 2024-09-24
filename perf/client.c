@@ -108,7 +108,7 @@ void *client_thread_write_signaled(void *arg)
     bool stop = false;
     while (!stop)
     {
-        ret = post_write_signaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
+        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, 1, rptr, rkey);
 
         while ((num_completion = ibv_poll_cq(cq, NUM_WC, wc)) == 0)
         {
@@ -243,12 +243,12 @@ void *client_thread_write_unsignaled(void *arg)
     {
         for (int i = 0; i < signal_freq; i++)
         {
-            ret = post_write_unsignaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
+            ret = post_write_unsignaled(*qp, buf_ptr, msg_size, lkey, 1, rptr, rkey);
             roffset = (roffset + msg_size) % rsize;
             rptr = raddr + roffset;
         }
 
-        ret = post_write_signaled(*qp, buf_ptr,msg_size, lkey, 1,  rptr, rkey);
+        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, 1, rptr, rkey);
         roffset = (roffset + msg_size) % rsize;
         rptr = raddr + roffset;
 
@@ -863,7 +863,7 @@ void *client_thread_send_unsignaled(void *arg)
     {
         for (int i = 0; i < signal_freq; i++)
         {
-            ret = post_send_unsignaled(*qp, buf_ptr,msg_size, lkey, 1, 1);
+            ret = post_send_unsignaled(*qp, buf_ptr, msg_size, lkey, 1, 1);
             buf_offset = (buf_offset + msg_size) % buf_size;
             buf_ptr = buf_base + buf_offset;
         }

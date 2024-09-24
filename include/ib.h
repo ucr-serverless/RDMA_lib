@@ -42,6 +42,10 @@ struct ib_ctx
     uint32_t n_send_wc;
     uint32_t n_recv_wc;
     uint32_t max_send_wr;
+    uint32_t max_send_sge;
+    uint32_t max_recv_sge;
+    struct ibv_sge *send_sg_list;
+    struct ibv_sge *recv_sg_list;
 };
 
 int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers);

@@ -17,7 +17,7 @@ endif
 CFLAGS += -Wall -Werror  -O3
 INCLUDES = -I./ -I./test/unity -I./perf -I./include -I./utils
 LDFLAGS += -libverbs
-LIBS=-pthread
+LDLIBS += -pthread
 
 
 TEST_DIR=test
@@ -39,7 +39,7 @@ TEST_OBJS=$(TEST_FILES:.c=.o)
 PERF_OBJS=$(PERF_FILES:.c=.o)
 UNITY_OBJS=$(UNITY_FILES:.c=.o)
 
-PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap
+PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 LIB_NAME = libRDMA_lib.a
@@ -55,11 +55,15 @@ $(LIB_NAME): $(SRC_OBJS)
 
 $(BIN_DIR)/rdma-bench: $(SRC_OBJS) $(PERF_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/rdma-bench.o $(PERF_DIR)/rdma-bench_cfg.o $(PERF_DIR)/client.o $(PERF_DIR)/server.o $(PERF_DIR)/setup_ib.o $(SRC_OBJS) $(LDFLAGS) $(LIBS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/rdma-bench.o $(PERF_DIR)/rdma-bench_cfg.o $(PERF_DIR)/client.o $(PERF_DIR)/server.o $(PERF_DIR)/setup_ib.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(BIN_DIR)/rc_connection: $(SRC_OBJS) $(EXAMPLE_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LIBS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+
+$(BIN_DIR)/sg_list: $(SRC_OBJS) $(EXAMPLE_OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/sg_list.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
 	@mkdir -p $(BIN_DIR)
@@ -68,7 +72,7 @@ $(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
 
 $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS) $(LIBS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 
 .PHONY: clean format bear debug
