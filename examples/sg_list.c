@@ -156,14 +156,16 @@ int main(int argc, char *argv[])
             printf("\n");
         }
         ctx.recv_sg_list[0].addr = (uint64_t)buffers[2];
-        ctx.recv_sg_list[0].length = sizeof(uint32_t);
+        ctx.recv_sg_list[0].length = 3 * sizeof(uint32_t);
         ctx.recv_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
 
         ctx.recv_sg_list[1].addr = (uint64_t)buffers[3];
         ctx.recv_sg_list[1].length = sizeof(uint32_t);
         ctx.recv_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
 
-        post_srq_recv_sg_list(ctx.srq, ctx.recv_sg_list, 2, 1);
+        post_srq_recv_sg_list(ctx.srq, ctx.recv_sg_list, 1, 1);
+
+        log_debug("post sg_list success");
 
         struct ibv_wc wc;
         int wc_num = 0;
@@ -172,6 +174,8 @@ int main(int argc, char *argv[])
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
 
         printf("receved\n");
+        printf("wc status: %s\n", ibv_wc_status_str(wc.status));
+
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {
@@ -210,12 +214,14 @@ int main(int argc, char *argv[])
         }
         post_send_sg_list_signaled(ctx.qps[0], ctx.send_sg_list, 2, 0, 0);
 
+        log_debug("post sg_list success");
         struct ibv_wc wc;
         int wc_num = 0;
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
         printf("get ack\n");
+        printf("wc status: %s\n", ibv_wc_status_str(wc.status));
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {

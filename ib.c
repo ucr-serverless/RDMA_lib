@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -217,7 +218,6 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
                 ibv_dereg_mr(ctx->remote_mrs[i]);
             }
         }
-        free(ctx->remote_mrs);
         ctx->remote_mrs = NULL;
     }
 
@@ -230,7 +230,6 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
                 ibv_dereg_mr(ctx->local_mrs[i]);
             }
         }
-        free(ctx->local_mrs);
         ctx->local_mrs = NULL;
     }
     if (ctx->qps)
@@ -484,6 +483,7 @@ int post_send_sg_list(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_li
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
     if (ret != 0)
     {
+        log_error("post send sg_list fail, %s", strerror(ret));
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
@@ -532,6 +532,7 @@ int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t
     ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
     if (ret != 0)
     {
+        log_error("post srq failed: %s\n", strerror(ret));
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
