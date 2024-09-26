@@ -1,4 +1,3 @@
-#include "debug.h"
 #include "ib.h"
 #include "qp.h"
 #include "rdma_config.h"
@@ -108,11 +107,6 @@ int main(int argc, char *argv[])
     }
 
 #ifdef DEBUG
-    printf("srq sg_list size\n");
-    printf("\t%d\n", ctx.max_srq_sge);
-
-    printf("send sg_list size\n");
-    printf("\t%d\n", ctx.max_send_sge);
 
     printf("remote qp_nums\n");
     for (size_t i = 0; i < remote_res.n_qp; i++)
@@ -158,17 +152,16 @@ int main(int argc, char *argv[])
             }
             printf("\n");
         }
-        ctx.srq_sg_list[0].addr = (uint64_t)buffers[2];
-        ctx.srq_sg_list[0].length = 2 * sizeof(uint32_t);
-        ctx.srq_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
+        ctx.recv_sg_list[0].addr = (uint64_t)buffers[2];
+        ctx.recv_sg_list[0].length = sizeof(uint32_t);
+        ctx.recv_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
 
-        ctx.srq_sg_list[1].addr = (uint64_t)buffers[3];
-        ctx.srq_sg_list[1].length = 2 * sizeof(uint32_t);
-        ctx.srq_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
+        ctx.recv_sg_list[1].addr = (uint64_t)buffers[3];
+        ctx.recv_sg_list[1].length = sizeof(uint32_t);
+        ctx.recv_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
 
-        post_srq_recv_sg_list(ctx.srq, ctx.srq_sg_list, 2, 1);
-
-        log_debug("post sg_list success");
+        post_srq_recv_sg_list(ctx.srq, ctx.recv_sg_list, 2, 1);
+        printf("recv request posted\n");
 
         struct ibv_wc wc;
         int wc_num = 0;
@@ -177,7 +170,6 @@ int main(int argc, char *argv[])
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
 
         printf("receved\n");
-        printf("wc status: %s\n", ibv_wc_status_str(wc.status));
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {
@@ -215,15 +207,14 @@ int main(int argc, char *argv[])
             printf("\n");
         }
         post_send_sg_list_signaled(ctx.qps[0], ctx.send_sg_list, 2, 0, 0);
+        printf("post send srq\n");
 
-        log_debug("post sg_list success");
         struct ibv_wc wc;
         int wc_num = 0;
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
         printf("get ack\n");
-        printf("wc status: %s\n", ibv_wc_status_str(wc.status));
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {
@@ -239,8 +230,6 @@ int main(int argc, char *argv[])
 
     printf("finished setup connection\n");
 
-    free(server_name);
-    free(port);
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);

@@ -39,7 +39,7 @@ TEST_OBJS=$(TEST_FILES:.c=.o)
 PERF_OBJS=$(PERF_FILES:.c=.o)
 UNITY_OBJS=$(UNITY_FILES:.c=.o)
 
-PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list
+PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list $(BIN_DIR)/sg_list_perf
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 LIB_NAME = libRDMA_lib.a
@@ -64,6 +64,10 @@ $(BIN_DIR)/rc_connection: $(SRC_OBJS) $(EXAMPLE_OBJS)
 $(BIN_DIR)/sg_list: $(SRC_OBJS) $(EXAMPLE_OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/sg_list.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+
+$(BIN_DIR)/sg_list_perf: $(SRC_OBJS) $(EXAMPLE_OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/sg_list_perf.o  $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
 	@mkdir -p $(BIN_DIR)
