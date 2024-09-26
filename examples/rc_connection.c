@@ -230,6 +230,8 @@ int main(int argc, char *argv[])
 
     printf("finished setup connection\n");
 
+    free(server_name);
+    free(port);
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);

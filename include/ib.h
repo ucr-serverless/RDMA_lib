@@ -36,6 +36,7 @@ struct ib_ctx
     uint32_t send_cqe;
     uint32_t recv_cqe;
     uint32_t srqe;
+    uint32_t max_srq_sge;
     uint8_t ib_port;
     struct ibv_wc *send_wc;
     struct ibv_wc *recv_wc;
@@ -46,6 +47,8 @@ struct ib_ctx
     uint32_t max_recv_sge;
     struct ibv_sge *send_sg_list;
     struct ibv_sge *recv_sg_list;
+    struct ibv_sge *srq_sg_list;
+    struct ibv_recv_wr *bad_recv_wr;
 };
 
 int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers);
@@ -94,7 +97,7 @@ int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lk
 int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                            uint32_t num);
 
-int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge* sg_list, uint32_t sg_list_len, uint64_t wr_id);
+int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id);
 
 int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id);
 int post_write_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,  uint64_t raddr, uint32_t rkey);

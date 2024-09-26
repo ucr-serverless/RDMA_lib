@@ -120,16 +120,19 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
     ctx->srqe = ctx->device_attr.max_srq_wr - 1;
     struct ibv_srq_init_attr attr = {.attr = {/* when using sreq, rx_depth sets the max_wr */
                                               .max_wr = ctx->device_attr.max_srq_wr - 1,
-                                              .max_sge = 1}};
+                                              .max_sge = ctx->device_attr.max_srq_sge - 1}};
     retry_cnt = 0;
 
     do
     {
         ctx->srq = ibv_create_srq(ctx->pd, &attr);
         attr.attr.max_wr /= 2;
+        attr.attr.max_sge /= 2;
         retry_cnt++;
     } while (!ctx->srq && retry_cnt < RETRY_MAX);
+
     ctx->srqe = attr.attr.max_wr;
+    ctx->max_srq_sge = attr.attr.max_sge;
 
     if (unlikely(!(ctx->srq)))
     {
@@ -142,6 +145,7 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         log_error("Error, init multiple qps\n");
         goto error;
     }
+    ctx->local_mrs = NULL;
 
     if (local_buffers)
     {
@@ -154,6 +158,9 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
         ctx->local_mrs_num = params->local_mr_num;
     }
+
+    ctx->remote_mrs = NULL;
+
     if (remote_buffers)
     {
         if (unlikely(register_multiple_remote_mr(ctx, remote_buffers, params->remote_mr_size, params->remote_mr_num,
@@ -190,9 +197,12 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         goto error;
     }
 
-    ctx->recv_sg_list = (struct ibv_sge *)calloc(ctx->max_recv_sge, sizeof(struct ibv_sge));
+    // use srq by default
+    ctx->recv_sg_list = NULL;
 
-    if (unlikely(ctx->recv_sg_list == NULL))
+    ctx->srq_sg_list = (struct ibv_sge *)calloc(ctx->max_srq_sge, sizeof(struct ibv_sge));
+
+    if (unlikely(ctx->srq_sg_list == NULL))
     {
         log_error("Error, allocate send sg_list fail");
         goto error;
@@ -218,6 +228,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
                 ibv_dereg_mr(ctx->remote_mrs[i]);
             }
         }
+        free(ctx->remote_mrs);
         ctx->remote_mrs = NULL;
     }
 
@@ -230,6 +241,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
                 ibv_dereg_mr(ctx->local_mrs[i]);
             }
         }
+        free(ctx->local_mrs);
         ctx->local_mrs = NULL;
     }
     if (ctx->qps)
@@ -295,6 +307,11 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
         free(ctx->recv_sg_list);
         ctx->recv_sg_list = NULL;
     }
+    if (ctx->srq_sg_list)
+    {
+        free(ctx->srq_sg_list);
+        ctx->srq_sg_list = NULL;
+    }
 }
 
 void print_ib_res(struct ib_res *res)
@@ -327,23 +344,19 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
     res->sgid_idx = ctx->sgid_idx;
     res->ib_port = ctx->ib_port;
 
-    uint32_t *qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
-    if (!qp_nums)
+    res->qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
+    if (!res->qp_nums)
     {
         log_error("Error, fail to allocate mem for qps");
         goto error;
     }
 
-    res->qp_nums = qp_nums;
-
-    struct mr_info *mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
-    if (!mrs)
+    res->mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
+    if (!res->mrs)
     {
         log_error("Error, fail to allocate mem for mrs");
         goto error;
     }
-
-    res->mrs = mrs;
 
     for (size_t i = 0; i < res->n_qp; i++)
     {
@@ -360,6 +373,7 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
     return RDMA_SUCCESS;
 error:
     log_error("init local ib res failed\n");
+    destroy_ib_res(res);
     return RDMA_FAILURE;
 }
 
@@ -405,14 +419,14 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
         log_error("Error, recv ib res\n");
         goto error;
     }
-    uint32_t *qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
-    if (!qp_nums)
+    res->qp_nums = (uint32_t *)calloc(res->n_qp, sizeof(uint32_t));
+    if (!res->qp_nums)
     {
         log_error("Error, fail to allocate mem for qps");
         goto error;
     }
-    struct mr_info *mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
-    if (!mrs)
+    res->mrs = (struct mr_info *)calloc(res->n_mr, sizeof(struct mr_info));
+    if (!res->mrs)
     {
         log_error("Error, fail to allocate mem for mrs");
         goto error;
@@ -420,26 +434,22 @@ int recv_ib_res(struct ib_res *res, int sock_fd)
     for (size_t i = 0; i < res->n_qp; i++)
     {
 
-        if (sock_read(sock_fd, &(qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
+        if (sock_read(sock_fd, &(res->qp_nums[i]), sizeof(uint32_t)) != sizeof(uint32_t))
         {
             log_error("Error, Recv qp_num at index %lu\n", i);
             goto error;
         }
     }
 
-    res->qp_nums = qp_nums;
-
     for (size_t i = 0; i < res->n_mr; i++)
     {
 
-        if (sock_read(sock_fd, &(mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
+        if (sock_read(sock_fd, &(res->mrs[i]), sizeof(struct mr_info)) != sizeof(struct mr_info))
         {
             log_error("Error, Recv ibv_mr at index %lu\n", i);
             goto error;
         }
     }
-
-    res->mrs = mrs;
 
     return RDMA_SUCCESS;
 error:
@@ -525,9 +535,10 @@ int post_send_sg_list_unsignaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uin
 int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id)
 {
     int ret = 0;
+
     struct ibv_recv_wr *bad_recv_wr;
 
-    struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .sg_list = sg_list, .num_sge = sg_list_len};
+    struct ibv_recv_wr recv_wr = {.wr_id = wr_id, .next = NULL, .sg_list = sg_list, .num_sge = sg_list_len};
 
     ret = ibv_post_srq_recv(srq, &recv_wr, &bad_recv_wr);
     if (ret != 0)

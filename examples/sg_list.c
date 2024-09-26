@@ -110,6 +110,11 @@ int main(int argc, char *argv[])
     }
 
 #ifdef DEBUG
+    printf("srq sg_list size\n");
+    printf("\t%d", ctx.max_srq_sge);
+
+    printf("send sg_list size\n");
+    printf("\t%d", ctx.max_send_sge);
 
     printf("remote qp_nums\n");
     for (size_t i = 0; i < remote_res.n_qp; i++)
@@ -155,15 +160,15 @@ int main(int argc, char *argv[])
             }
             printf("\n");
         }
-        ctx.recv_sg_list[0].addr = (uint64_t)buffers[2];
-        ctx.recv_sg_list[0].length = 3 * sizeof(uint32_t);
-        ctx.recv_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
+        ctx.srq_sg_list[0].addr = (uint64_t)buffers[2];
+        ctx.srq_sg_list[0].length = 2 * sizeof(uint32_t);
+        ctx.srq_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
 
-        ctx.recv_sg_list[1].addr = (uint64_t)buffers[3];
-        ctx.recv_sg_list[1].length = sizeof(uint32_t);
-        ctx.recv_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
+        ctx.srq_sg_list[1].addr = (uint64_t)buffers[3];
+        ctx.srq_sg_list[1].length = 2 * sizeof(uint32_t);
+        ctx.srq_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
 
-        post_srq_recv_sg_list(ctx.srq, ctx.recv_sg_list, 1, 1);
+        post_srq_recv_sg_list(ctx.srq, ctx.srq_sg_list, 2, 1);
 
         log_debug("post sg_list success");
 
@@ -175,7 +180,6 @@ int main(int argc, char *argv[])
 
         printf("receved\n");
         printf("wc status: %s\n", ibv_wc_status_str(wc.status));
-
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {
@@ -237,6 +241,8 @@ int main(int argc, char *argv[])
 
     printf("finished setup connection\n");
 
+    free(server_name);
+    free(port);
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);
