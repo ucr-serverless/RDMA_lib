@@ -111,10 +111,10 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     printf("srq sg_list size\n");
-    printf("\t%d", ctx.max_srq_sge);
+    printf("\t%d\n", ctx.max_srq_sge);
 
     printf("send sg_list size\n");
-    printf("\t%d", ctx.max_send_sge);
+    printf("\t%d\n", ctx.max_send_sge);
 
     printf("remote qp_nums\n");
     for (size_t i = 0; i < remote_res.n_qp; i++)
