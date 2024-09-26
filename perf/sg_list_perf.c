@@ -17,21 +17,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define LEN 1024
 
 #define REPEAT 100000
 
-void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
 {
     for (size_t j = 0; j < sg_parts; j++)
     {
         sge[j].addr = (uint64_t)buffers[j];
-        sge[j].length = LEN / sg_parts;
+        sge[j].length = total_len / sg_parts;
         sge[j].lkey = ctx->remote_mrs[j]->lkey;
     }
 }
 
-void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
 {
     printf("send %lu sg_parts\n", sg_parts);
     struct ibv_wc wc;
@@ -41,7 +40,7 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     gettimeofday(&start, NULL);
     for (size_t i = 0; i < REPEAT; i++)
     {
-        fill_sg_list(ctx, ctx->send_sg_list, buffers, sg_parts);
+        fill_sg_list(ctx, ctx->send_sg_list, buffers, total_len, sg_parts);
         post_send_sg_list_signaled(ctx->qps[0], ctx->send_sg_list, sg_parts, 0, 0);
         do
         {
@@ -52,7 +51,7 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     printf("averaged send latency for %lu parts: %f micro second\n", sg_parts, duration / REPEAT);
 }
 
-void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
 {
     printf("recv %lu sg_parts\n", sg_parts);
     struct ibv_wc wc;
@@ -62,7 +61,7 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     gettimeofday(&start, NULL);
     for (size_t i = 0; i < REPEAT; i++)
     {
-        fill_sg_list(ctx, ctx->srq_sg_list, buffers, sg_parts);
+        fill_sg_list(ctx, ctx->srq_sg_list, buffers, total_len, sg_parts);
         post_srq_recv_sg_list(ctx->srq, ctx->srq_sg_list, sg_parts, 1);
         do
         {
@@ -87,8 +86,10 @@ int main(int argc, char *argv[])
         {"server_ip", required_argument, NULL, 1},
         {"port", required_argument, NULL, 2},
         {"sg_sender", required_argument, NULL, 3},
+        {"total_len", required_argument, NULL, 4},
     };
 
+    int total_len = 0;
     int sg_sender = 0;
     int ch = 0;
     bool is_server = true;
@@ -109,6 +110,9 @@ int main(int argc, char *argv[])
         case 3:
             sg_sender = 1;
             break;
+        case 4:
+            total_len = atoi(optarg);
+            break;
         case '?':
             printf("options error\n");
             exit(1);
@@ -121,7 +125,7 @@ int main(int argc, char *argv[])
         .ib_port = 1,
         .qp_num = 1,
         .remote_mr_num = 1024,
-        .remote_mr_size = LEN,
+        .remote_mr_size = total_len,
         .init_cqe_num = 128,
         .max_send_wr = 100,
         .n_send_wc = 10,
@@ -219,11 +223,11 @@ int main(int argc, char *argv[])
             }
             if (!sg_sender)
             {
-                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, sg_part[i]);
+                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, sg_part[i]);
             }
             else
             {
-                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, 1);
+                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, 1);
             }
         }
 
@@ -242,11 +246,11 @@ int main(int argc, char *argv[])
             }
             if (sg_sender)
             {
-                send_sg_list(&ctx, ctx.srq_sg_list, buffers, sg_part[i]);
+                send_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, sg_part[i]);
             }
             else
             {
-                send_sg_list(&ctx, ctx.srq_sg_list, buffers, 1);
+                send_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, 1);
             }
         }
 
