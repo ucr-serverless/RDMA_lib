@@ -33,6 +33,7 @@ void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
 
 void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
 {
+    printf("send %lu sg_parts", sg_parts);
     struct ibv_wc wc;
     int wc_num = 0;
     double duration;
@@ -44,7 +45,7 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         post_send_sg_list_signaled(ctx->qps[0], ctx->send_sg_list, sg_parts, 0, 0);
         do
         {
-        } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
+        } while ((wc_num = ibv_poll_cq(ctx->send_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
     duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
@@ -53,6 +54,7 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
 
 void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
 {
+    printf("recv %lu sg_parts", sg_parts);
     struct ibv_wc wc;
     int wc_num = 0;
     double duration;
@@ -61,7 +63,7 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     for (size_t i = 0; i < REPEAT; i++)
     {
         fill_sg_list(ctx, ctx->srq_sg_list, buffers, sg_parts);
-        post_srq_recv_sg_list(ctx->srq, ctx->recv_sg_list, sg_parts, 1);
+        post_srq_recv_sg_list(ctx->srq, ctx->srq_sg_list, sg_parts, 1);
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));

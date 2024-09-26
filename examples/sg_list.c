@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     static struct option long_options[] = {
         {"server_ip", required_argument, NULL, 1},
-        {"sock_port", required_argument, NULL, 2},
+        {"port", required_argument, NULL, 2},
     };
 
     int ch = 0;
