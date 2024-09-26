@@ -33,7 +33,7 @@ void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
 
 void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
 {
-    printf("send %lu sg_parts", sg_parts);
+    printf("send %lu sg_parts\n", sg_parts);
     struct ibv_wc wc;
     int wc_num = 0;
     double duration;
@@ -48,13 +48,13 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         } while ((wc_num = ibv_poll_cq(ctx->send_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
-    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec));
-    printf("averaged send latency for %lu parts: %f\n", sg_parts, duration / REPEAT);
+    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec) );
+    printf("averaged send latency for %lu parts: %f micro second\n", sg_parts, duration / REPEAT);
 }
 
 void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
 {
-    printf("recv %lu sg_parts", sg_parts);
+    printf("recv %lu sg_parts\n", sg_parts);
     struct ibv_wc wc;
     int wc_num = 0;
     double duration;
@@ -69,8 +69,8 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
-    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
-    printf("averaged recv latency for %lu parts: %f\n", sg_parts, duration / REPEAT);
+    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec) );
+    printf("averaged recv latency for %lu parts: %f micro second\n", sg_parts, duration / REPEAT);
 }
 int main(int argc, char *argv[])
 {
