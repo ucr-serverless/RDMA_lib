@@ -48,8 +48,8 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         } while ((wc_num = ibv_poll_cq(ctx->send_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
-    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
-    printf("averaged send latency for %lu parts: %f\n", sg_parts, duration);
+    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec));
+    printf("averaged send latency for %lu parts: %f\n", sg_parts, duration / REPEAT);
 }
 
 void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
@@ -70,7 +70,7 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     }
     gettimeofday(&end, NULL);
     duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
-    printf("averaged recv latency for %lu parts: %f\n", sg_parts, duration);
+    printf("averaged recv latency for %lu parts: %f\n", sg_parts, duration / REPEAT);
 }
 int main(int argc, char *argv[])
 {
