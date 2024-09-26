@@ -3,6 +3,7 @@
 #include "rdma_config.h"
 #include "sock.h"
 #include <arpa/inet.h>
+#include <assert.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <infiniband/verbs.h>
@@ -12,19 +13,81 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
 
+#define LEN 1024
+
+#define REPEAT 100000
+
+void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+{
+    for (size_t j = 0; j < sg_parts; j++)
+    {
+        sge[j].addr = (uint64_t)buffers[j];
+        sge[j].length = LEN / sg_parts;
+        sge[j].lkey = ctx->remote_mrs[j]->lkey;
+    }
+}
+
+void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+{
+    struct ibv_wc wc;
+    int wc_num = 0;
+    double duration;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    for (size_t i = 0; i < REPEAT; i++)
+    {
+        fill_sg_list(ctx, ctx->send_sg_list, buffers, sg_parts);
+        post_send_sg_list_signaled(ctx->qps[0], ctx->send_sg_list, sg_parts, 0, 0);
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
+    }
+    gettimeofday(&end, NULL);
+    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
+    printf("averaged send latency for %lu parts: %f\n", sg_parts, duration);
+}
+
+void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t sg_parts)
+{
+    struct ibv_wc wc;
+    int wc_num = 0;
+    double duration;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    for (size_t i = 0; i < REPEAT; i++)
+    {
+        fill_sg_list(ctx, ctx->srq_sg_list, buffers, sg_parts);
+        post_srq_recv_sg_list(ctx->srq, ctx->recv_sg_list, sg_parts, 1);
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
+    }
+    gettimeofday(&end, NULL);
+    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / REPEAT);
+    printf("averaged recv latency for %lu parts: %f\n", sg_parts, duration);
+}
 int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
-    static struct option long_options[] = {
-        {"server_ip", required_argument, NULL, 1},
-        {"sock_port", required_argument, NULL, 2},
+    static size_t sg_part[] = {
+        1, 2, 4, 8, 16, 32,
+
     };
 
+    size_t sg_part_len = sizeof(sg_part) / sizeof(sg_part[0]);
+
+    static struct option long_options[] = {
+        {"server_ip", required_argument, NULL, 1},
+        {"port", required_argument, NULL, 2},
+        {"sg_sender", required_argument, NULL, 3},
+    };
+
+    int sg_sender = 0;
     int ch = 0;
     bool is_server = true;
     char *server_name = NULL;
@@ -41,6 +104,9 @@ int main(int argc, char *argv[])
         case 2:
             port = strdup(optarg);
             break;
+        case 3:
+            sg_sender = 1;
+            break;
         case '?':
             printf("options error\n");
             exit(1);
@@ -52,8 +118,8 @@ int main(int argc, char *argv[])
         .sgid_idx = 3,
         .ib_port = 1,
         .qp_num = 1,
-        .remote_mr_num = 4,
-        .remote_mr_size = 4 * sizeof(uint32_t),
+        .remote_mr_num = 1024,
+        .remote_mr_size = LEN,
         .init_cqe_num = 128,
         .max_send_wr = 100,
         .n_send_wc = 10,
@@ -138,48 +204,27 @@ int main(int argc, char *argv[])
     /* uint32_t msg_size = 2048; */
 
 #endif /* ifdef DEBUG */
-    // server would post recv sg-list
+
     if (is_server)
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
 
-        for (size_t i = 0; i < params.remote_mr_num; i++)
+        for (size_t i = 0; i < sg_part_len; i++)
         {
-            for (size_t j = 0; j < params.remote_mr_size / sizeof(uint32_t); j++)
+            if (sg_part[i] > ctx.max_srq_sge)
             {
-
-                printf("%d, ", *((uint32_t *)buffers[i] + j));
+                continue;
             }
-            printf("\n");
-        }
-        ctx.recv_sg_list[0].addr = (uint64_t)buffers[2];
-        ctx.recv_sg_list[0].length = sizeof(uint32_t);
-        ctx.recv_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
-
-        ctx.recv_sg_list[1].addr = (uint64_t)buffers[3];
-        ctx.recv_sg_list[1].length = sizeof(uint32_t);
-        ctx.recv_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
-
-        post_srq_recv_sg_list(ctx.srq, ctx.recv_sg_list, 2, 1);
-        printf("recv request posted\n");
-
-        struct ibv_wc wc;
-        int wc_num = 0;
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-
-        printf("receved\n");
-
-        for (size_t i = 0; i < params.remote_mr_num; i++)
-        {
-            for (size_t j = 0; j < params.remote_mr_size / sizeof(uint32_t); j++)
+            if (!sg_sender)
             {
-
-                printf("%d, ", *((uint32_t *)buffers[i] + j));
+                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, sg_part[i]);
             }
-            printf("\n");
+            else
+            {
+                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, 1);
+            }
         }
+
         close(self_fd);
         close(peer_fd);
     }
@@ -187,48 +232,24 @@ int main(int argc, char *argv[])
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
 
-        ((uint32_t *)buffers[0])[0] = 1;
-        ctx.send_sg_list[0].addr = (uint64_t)buffers[0];
-        ctx.send_sg_list[0].length = sizeof(uint32_t);
-        ctx.send_sg_list[0].lkey = ctx.remote_mrs[0]->lkey;
-
-        ((uint32_t *)buffers[1])[0] = 1;
-        ctx.send_sg_list[1].addr = (uint64_t)buffers[1];
-        ctx.send_sg_list[1].length = sizeof(uint32_t);
-        ctx.send_sg_list[1].lkey = ctx.remote_mrs[1]->lkey;
-
-        for (size_t i = 0; i < params.remote_mr_num; i++)
+        for (size_t i = 0; i < sg_part_len; i++)
         {
-            for (size_t j = 0; j < params.remote_mr_size / sizeof(uint32_t); j++)
+            if (sg_part[i] > ctx.max_srq_sge)
             {
-
-                printf("%d, ", *((uint32_t *)buffers[i] + j));
+                continue;
             }
-            printf("\n");
-        }
-        post_send_sg_list_signaled(ctx.qps[0], ctx.send_sg_list, 2, 0, 0);
-        printf("post send srq\n");
-
-        struct ibv_wc wc;
-        int wc_num = 0;
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("get ack\n");
-
-        for (size_t i = 0; i < params.remote_mr_num; i++)
-        {
-            for (size_t j = 0; j < params.remote_mr_size / sizeof(uint32_t); j++)
+            if (sg_sender)
             {
-
-                printf("%d, ", *((uint32_t *)buffers[i] + j));
+                send_sg_list(&ctx, ctx.srq_sg_list, buffers, sg_part[i]);
             }
-            printf("\n");
+            else
+            {
+                send_sg_list(&ctx, ctx.srq_sg_list, buffers, 1);
+            }
         }
+
         close(peer_fd);
     }
-
-    printf("finished setup connection\n");
 
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));

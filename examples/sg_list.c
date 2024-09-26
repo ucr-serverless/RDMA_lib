@@ -4,6 +4,7 @@
 #include "rdma_config.h"
 #include "sock.h"
 #include <arpa/inet.h>
+#include <assert.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <infiniband/verbs.h>
@@ -15,7 +16,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <assert.h>
 
 int main(int argc, char *argv[])
 {
@@ -200,9 +200,10 @@ int main(int argc, char *argv[])
         ctx.send_sg_list[0].length = sizeof(uint32_t);
         ctx.send_sg_list[0].lkey = ctx.remote_mrs[0]->lkey;
 
-        ((uint32_t *)buffers[1])[0] = 1;
+        ((uint32_t *)buffers[1])[0] = 2;
+        ((uint32_t *)buffers[1])[1] = 3;
         ctx.send_sg_list[1].addr = (uint64_t)buffers[1];
-        ctx.send_sg_list[1].length = sizeof(uint32_t);
+        ctx.send_sg_list[1].length = 2 * sizeof(uint32_t);
         ctx.send_sg_list[1].lkey = ctx.remote_mrs[1]->lkey;
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
