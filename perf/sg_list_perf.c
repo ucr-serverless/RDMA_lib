@@ -30,7 +30,7 @@ void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     }
     if (total_len % sg_parts)
     {
-        sge[sg_parts - 1].length += total_len & sg_parts;
+        sge[sg_parts - 1].length += total_len % sg_parts;
     }
 }
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     struct ib_ctx ctx;
 
     static size_t sg_part[] = {
-        1, 2, 4, 8, 15, 16, 32,
+        1, 2, 4, 8, 12, 15, 16, 32,
 
     };
 
