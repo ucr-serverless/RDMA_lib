@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 
-#define REPEAT 100000
+#define REPEAT 10000000
 
 void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
 {
@@ -150,6 +150,10 @@ int main(int argc, char *argv[])
     printf("page_size_cap: %lu\n", ctx.device_attr.page_size_cap);
 #endif
     printf("Hello, World!\n");
+
+
+    printf("max srq sge: %d\n", ctx.max_srq_sge);
+    printf("max send sge: %d\n", ctx.max_send_sge);
 
     int self_fd = 0;
     int peer_fd = 0;
