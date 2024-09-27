@@ -28,6 +28,10 @@ void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         sge[j].length = total_len / sg_parts;
         sge[j].lkey = ctx->remote_mrs[j]->lkey;
     }
+    if (total_len % sg_parts)
+    {
+        sge[sg_parts - 1].length += total_len & sg_parts;
+    }
 }
 
 void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
@@ -76,7 +80,7 @@ int main(int argc, char *argv[])
     struct ib_ctx ctx;
 
     static size_t sg_part[] = {
-        1, 2, 4, 8, 16, 32,
+        1, 2, 4, 8, 15, 16, 32,
 
     };
 
