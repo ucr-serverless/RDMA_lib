@@ -87,6 +87,8 @@ int main(int argc, char *argv[])
     socklen_t peer_addr_len = sizeof(struct sockaddr_in);
     struct ib_res remote_res;
     struct ib_res local_res;
+    struct ibv_sge* send_l = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+    struct ibv_sge* srq_l = (struct ibv_sge*)calloc(ctx.max_srq_sge, sizeof(struct ibv_sge));
     init_local_ib_res(&ctx, &local_res);
     if (is_server)
     {
@@ -158,15 +160,15 @@ int main(int argc, char *argv[])
             }
             printf("\n");
         }
-        ctx.srq_sg_list[0].addr = (uint64_t)buffers[2];
-        ctx.srq_sg_list[0].length = 2 * sizeof(uint32_t);
-        ctx.srq_sg_list[0].lkey = ctx.remote_mrs[2]->lkey;
+        srq_l[0].addr = (uint64_t)buffers[2];
+        srq_l[0].length = 2 * sizeof(uint32_t);
+        srq_l[0].lkey = ctx.remote_mrs[2]->lkey;
 
-        ctx.srq_sg_list[1].addr = (uint64_t)buffers[3];
-        ctx.srq_sg_list[1].length = 2 * sizeof(uint32_t);
-        ctx.srq_sg_list[1].lkey = ctx.remote_mrs[3]->lkey;
+        srq_l[1].addr = (uint64_t)buffers[3];
+        srq_l[1].length = 2 * sizeof(uint32_t);
+        srq_l[1].lkey = ctx.remote_mrs[3]->lkey;
 
-        post_srq_recv_sg_list(ctx.srq, ctx.srq_sg_list, 2, 1);
+        post_srq_recv_sg_list(ctx.srq, srq_l, 2, 1);
 
         log_debug("post sg_list success");
 
@@ -196,15 +198,15 @@ int main(int argc, char *argv[])
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
 
         ((uint32_t *)buffers[0])[0] = 1;
-        ctx.send_sg_list[0].addr = (uint64_t)buffers[0];
-        ctx.send_sg_list[0].length = sizeof(uint32_t);
-        ctx.send_sg_list[0].lkey = ctx.remote_mrs[0]->lkey;
+        send_l[0].addr = (uint64_t)buffers[0];
+        send_l[0].length = sizeof(uint32_t);
+        send_l[0].lkey = ctx.remote_mrs[0]->lkey;
 
         ((uint32_t *)buffers[1])[0] = 2;
         ((uint32_t *)buffers[1])[1] = 3;
-        ctx.send_sg_list[1].addr = (uint64_t)buffers[1];
-        ctx.send_sg_list[1].length = 2 * sizeof(uint32_t);
-        ctx.send_sg_list[1].lkey = ctx.remote_mrs[1]->lkey;
+        send_l[1].addr = (uint64_t)buffers[1];
+        send_l[1].length = 2 * sizeof(uint32_t);
+        send_l[1].lkey = ctx.remote_mrs[1]->lkey;
 
         for (size_t i = 0; i < params.remote_mr_num; i++)
         {
@@ -215,7 +217,7 @@ int main(int argc, char *argv[])
             }
             printf("\n");
         }
-        post_send_sg_list_signaled(ctx.qps[0], ctx.send_sg_list, 2, 0, 0);
+        post_send_sg_list_signaled(ctx.qps[0], send_l, 2, 0, 0);
 
         log_debug("post sg_list success");
         struct ibv_wc wc;
@@ -242,6 +244,8 @@ int main(int argc, char *argv[])
 
     free(server_name);
     free(port);
+    free(send_l);
+    free(srq_l);
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);

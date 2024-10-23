@@ -189,24 +189,13 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         goto error;
     }
 
-    ctx->send_sg_list = (struct ibv_sge *)calloc(ctx->max_send_sge, sizeof(struct ibv_sge));
+    ctx->send_sg_list = NULL;
 
-    if (unlikely(ctx->send_sg_list == NULL))
-    {
-        log_error("Error, allocate send sg_list fail");
-        goto error;
-    }
-
-    // use srq by default
+    // use srq if the srq is used
     ctx->recv_sg_list = NULL;
 
-    ctx->srq_sg_list = (struct ibv_sge *)calloc(ctx->max_srq_sge, sizeof(struct ibv_sge));
+    ctx->srq_sg_list = NULL;
 
-    if (unlikely(ctx->srq_sg_list == NULL))
-    {
-        log_error("Error, allocate send sg_list fail");
-        goto error;
-    }
 
     ibv_free_device_list(dev_list);
     return RDMA_SUCCESS;
@@ -296,21 +285,6 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     {
         free(ctx->recv_wc);
         ctx->recv_wc = NULL;
-    }
-    if (ctx->send_sg_list)
-    {
-        free(ctx->send_sg_list);
-        ctx->send_sg_list = NULL;
-    }
-    if (ctx->recv_sg_list)
-    {
-        free(ctx->recv_sg_list);
-        ctx->recv_sg_list = NULL;
-    }
-    if (ctx->srq_sg_list)
-    {
-        free(ctx->srq_sg_list);
-        ctx->srq_sg_list = NULL;
     }
 }
 

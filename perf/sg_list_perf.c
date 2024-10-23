@@ -44,8 +44,8 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     gettimeofday(&start, NULL);
     for (size_t i = 0; i < REPEAT; i++)
     {
-        fill_sg_list(ctx, ctx->send_sg_list, buffers, total_len, sg_parts);
-        post_send_sg_list_signaled(ctx->qps[0], ctx->send_sg_list, sg_parts, 0, 0);
+        fill_sg_list(ctx, sge, buffers, total_len, sg_parts);
+        post_send_sg_list_signaled(ctx->qps[0], sge, sg_parts, 0, 0);
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx->send_cq, 1, &wc) == 0));
@@ -65,8 +65,8 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
     gettimeofday(&start, NULL);
     for (size_t i = 0; i < REPEAT; i++)
     {
-        fill_sg_list(ctx, ctx->srq_sg_list, buffers, total_len, sg_parts);
-        post_srq_recv_sg_list(ctx->srq, ctx->srq_sg_list, sg_parts, 1);
+        fill_sg_list(ctx, sge, buffers, total_len, sg_parts);
+        post_srq_recv_sg_list(ctx->srq, sge, sg_parts, 1);
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
+    // test different length of sg_list
     static size_t sg_part[] = {
         1, 2, 4, 8, 12, 15, 16, 32,
 
@@ -163,6 +164,9 @@ int main(int argc, char *argv[])
     int peer_fd = 0;
     struct sockaddr_in peer_addr;
 
+    struct ibv_sge *send_sgl = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+    struct ibv_sge *srq_sgl = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+
     socklen_t peer_addr_len = sizeof(struct sockaddr_in);
     struct ib_res remote_res;
     struct ib_res local_res;
@@ -231,11 +235,11 @@ int main(int argc, char *argv[])
             }
             if (!sg_sender)
             {
-                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, sg_part[i]);
+                recv_sg_list(&ctx, srq_sgl, buffers, total_len, sg_part[i]);
             }
             else
             {
-                recv_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, 1);
+                recv_sg_list(&ctx, srq_sgl, buffers, total_len, 1);
             }
         }
 
@@ -248,17 +252,17 @@ int main(int argc, char *argv[])
 
         for (size_t i = 0; i < sg_part_len; i++)
         {
-            if (sg_part[i] > ctx.max_srq_sge)
+            if (sg_part[i] > ctx.max_send_sge)
             {
                 continue;
             }
             if (sg_sender)
             {
-                send_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, sg_part[i]);
+                send_sg_list(&ctx, send_sgl, buffers, total_len, sg_part[i]);
             }
             else
             {
-                send_sg_list(&ctx, ctx.srq_sg_list, buffers, total_len, 1);
+                send_sg_list(&ctx, send_sgl, buffers, total_len, 1);
             }
         }
 
@@ -268,6 +272,8 @@ int main(int argc, char *argv[])
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);
+    free(send_sgl);
+    free(srq_sgl);
     free(buf);
     free(buffers);
     return 0;
