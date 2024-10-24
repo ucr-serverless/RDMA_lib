@@ -196,7 +196,6 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
     ctx->srq_sg_list = NULL;
 
-
     ibv_free_device_list(dev_list);
     return RDMA_SUCCESS;
 error:

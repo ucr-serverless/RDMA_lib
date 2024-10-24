@@ -17,7 +17,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 #define REPEAT 10000000
 
 void fill_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_t total_len, size_t sg_parts)
@@ -51,7 +50,7 @@ void send_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         } while ((wc_num = ibv_poll_cq(ctx->send_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
-    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec) );
+    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec));
     printf("averaged send latency for %lu parts: %f micro second\n", sg_parts, duration / REPEAT);
 }
 
@@ -72,7 +71,7 @@ void recv_sg_list(struct ib_ctx *ctx, struct ibv_sge *sge, void **buffers, size_
         } while ((wc_num = ibv_poll_cq(ctx->recv_cq, 1, &wc) == 0));
     }
     gettimeofday(&end, NULL);
-    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec) );
+    duration = (double)((end.tv_sec - start.tv_sec) * 1000000 + (double)(end.tv_usec - start.tv_usec));
     printf("averaged recv latency for %lu parts: %f micro second\n", sg_parts, duration / REPEAT);
 }
 int main(int argc, char *argv[])
@@ -125,11 +124,11 @@ int main(int argc, char *argv[])
     }
 
     struct rdma_param params = {
-        .device_idx = 2,
+        .device_idx = 3,
         .sgid_idx = 3,
         .ib_port = 1,
         .qp_num = 1,
-        .remote_mr_num = 1024,
+        .remote_mr_num = 64,
         .remote_mr_size = total_len,
         .init_cqe_num = 128,
         .max_send_wr = 100,
@@ -156,7 +155,6 @@ int main(int argc, char *argv[])
 #endif
     printf("Hello, World!\n");
 
-
     printf("max srq sge: %d\n", ctx.max_srq_sge);
     printf("max send sge: %d\n", ctx.max_send_sge);
 
@@ -164,8 +162,8 @@ int main(int argc, char *argv[])
     int peer_fd = 0;
     struct sockaddr_in peer_addr;
 
-    struct ibv_sge *send_sgl = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
-    struct ibv_sge *srq_sgl = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+    struct ibv_sge *send_sgl = (struct ibv_sge *)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+    struct ibv_sge *srq_sgl = (struct ibv_sge *)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
 
     socklen_t peer_addr_len = sizeof(struct sockaddr_in);
     struct ib_res remote_res;

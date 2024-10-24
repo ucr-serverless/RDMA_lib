@@ -39,7 +39,8 @@ TEST_OBJS=$(TEST_FILES:.c=.o)
 PERF_OBJS=$(PERF_FILES:.c=.o)
 UNITY_OBJS=$(UNITY_FILES:.c=.o)
 
-PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list $(BIN_DIR)/sg_list_perf
+PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list $(BIN_DIR)/sg_list_perf $(BIN_DIR)/ping_pong
+
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
 LIB_NAME = libRDMA_lib.a
@@ -51,32 +52,36 @@ $(LIB_NAME): $(SRC_OBJS)
 	$(AR) rcs $@ $(SRC_OBJS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+	@$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 $(BIN_DIR)/rdma-bench: $(SRC_OBJS) $(PERF_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/rdma-bench.o $(PERF_DIR)/rdma-bench_cfg.o $(PERF_DIR)/client.o $(PERF_DIR)/server.o $(PERF_DIR)/setup_ib.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/rdma-bench.o $(PERF_DIR)/rdma-bench_cfg.o $(PERF_DIR)/client.o $(PERF_DIR)/server.o $(PERF_DIR)/setup_ib.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(BIN_DIR)/rc_connection: $(SRC_OBJS) $(EXAMPLE_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/rc_connection.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
-$(BIN_DIR)/sg_list: $(SRC_OBJS) $(EXAMPLE_OBJS)
+$(BIN_DIR)/sg_list: $(SRC_OBJS) $(EXAMPLE_DIR)/sg_list.o
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/sg_list.o $(EXAMPLE_DIR)/bitmap.o $(EXAMPLE_DIR)/memory_management.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/sg_list.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
-$(BIN_DIR)/sg_list_perf: $(SRC_OBJS) $(EXAMPLE_OBJS)
+$(BIN_DIR)/sg_list_perf: $(SRC_OBJS) $(PERF_DIR)/sg_list_perf.o
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/sg_list_perf.o  $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(PERF_DIR)/sg_list_perf.o  $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
-$(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o
+$(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o $(EXAMPLE_DIR)/bitmap.o
+	@@mkdir -p $(BIN_DIR)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/test_bitmap.o $(EXAMPLE_DIR)/bitmap.o
+
+
+$(BIN_DIR)/ping_pong: $(SRC_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/test_bitmap.o $(EXAMPLE_DIR)/bitmap.o
-
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/ping_pong.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 	@mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 
 .PHONY: clean format bear debug

@@ -87,8 +87,8 @@ int main(int argc, char *argv[])
     socklen_t peer_addr_len = sizeof(struct sockaddr_in);
     struct ib_res remote_res;
     struct ib_res local_res;
-    struct ibv_sge* send_l = (struct ibv_sge*)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
-    struct ibv_sge* srq_l = (struct ibv_sge*)calloc(ctx.max_srq_sge, sizeof(struct ibv_sge));
+    struct ibv_sge *send_l = (struct ibv_sge *)calloc(ctx.max_send_sge, sizeof(struct ibv_sge));
+    struct ibv_sge *srq_l = (struct ibv_sge *)calloc(ctx.max_srq_sge, sizeof(struct ibv_sge));
     init_local_ib_res(&ctx, &local_res);
     if (is_server)
     {

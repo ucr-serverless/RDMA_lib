@@ -1,11 +1,9 @@
 #include "debug.h"
-#include "examples/bitmap.h"
 #include "ib.h"
-#include "memory_management.h"
 #include "qp.h"
 #include "rdma_config.h"
 #include "sock.h"
-#include "utils.h"
+#include <assert.h>
 #include <arpa/inet.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
@@ -18,6 +16,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define MR_SIZE 10240
 
 int main(int argc, char *argv[])
 {
@@ -49,29 +49,30 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
+    // on xl170, the device_idx should be 3, on c6525-25g, the device_idx should be 2.
 
-    struct rdma_param params = {
-        .device_idx = 2,
+    struct rdma_param rparams = {
+        .device_idx = 3,
         .sgid_idx = 3,
         .ib_port = 1,
         .qp_num = 2,
         .remote_mr_num = 2,
-        .remote_mr_size = 2048,
+        .remote_mr_size = MR_SIZE,
         .init_cqe_num = 128,
         .max_send_wr = 100,
         .n_send_wc = 10,
         .n_recv_wc = 10,
     };
 
-    void **buffers = calloc(params.remote_mr_num, sizeof(void *));
+    void **buffers = (void **)calloc(rparams.remote_mr_num, sizeof(void *));
     assert(buffers);
-    void *buf = calloc(params.remote_mr_num, params.remote_mr_size);
+    void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
     assert(buf);
-    for (size_t i = 0; i < params.remote_mr_num; i++)
+    for (size_t i = 0; i < rparams.remote_mr_num; i++)
     {
-        buffers[i] = buf + i * params.remote_mr_size;
+        buffers[i] = buf + i * rparams.remote_mr_size;
     }
-    init_ib_ctx(&ctx, &params, NULL, buffers);
+    init_ib_ctx(&ctx, &rparams, NULL, buffers);
 
 #ifdef DEBUG
 
@@ -137,99 +138,72 @@ int main(int argc, char *argv[])
         printf("mr rkey %d\n", local_res.mrs[i].rkey);
     }
 
-    /* uint32_t msg_size = 2048; */
-
 #endif /* ifdef DEBUG */
-    void *raddr = NULL;
-    uint32_t blk_size = 4;
-    void *laddr = local_res.mrs[0].addr;
-    uint32_t rkey = 0;
-    uint32_t msg_size = 2048;
-    uint32_t mr_info_len = 1;
+
     int ret = 0;
     if (is_server)
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
-        /* modify_qp_init(ctx.qps[0], &local_res); */
-        /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
-        /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
-        bitmap *bp;
-        uint32_t slot;
-        uint32_t slot_num;
-        init_qp_bitmap(ctx.remote_mrs_num / ctx.qp_num, params.remote_mr_size, blk_size, &bp);
-        find_avaliable_slot(bp, msg_size, blk_size, remote_res.mrs, mr_info_len, &slot, &slot_num, &raddr, &rkey);
-        printf("slot: %d\n", slot);
-        printf("slot_num: %d\n", slot_num);
-        printf("rkey: %d\n", rkey);
-        printf("raddr: %p\n", raddr);
 
-        *(char *)laddr = '1';
-        printf("local content: %c\n", *(char *)laddr);
+        ret = post_srq_recv(ctx.srq, local_res.mrs[1].addr, local_res.mrs[1].length, local_res.mrs[1].lkey, 0);
+        if (ret != RDMA_SUCCESS)
+        {
+            log_error("post recv request failed");
+        }
+        const char *test_str = "Hello, world!";
 
-        ret = pre_post_dumb_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
-                                     ctx.srqe);
+        strncpy(local_res.mrs[0].addr, test_str, MR_SIZE);
 
-        ret = post_write_imm_signaled(ctx.qps[0], local_res.mrs[0].addr, msg_size, local_res.mrs[0].lkey, 0,
-                                      (uint64_t)raddr, rkey, slot);
+        ret =
+            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
-        printf("%d\n", ret);
-        /* int ret = 0; */
+        struct ibv_wc wc;
+        int wc_num = 0;
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
+        printf("Got send cqe!!\n");
 
-        printf("addr: %p\n", raddr);
-        printf("slot: %d\n", slot);
-        bitmap_set_consecutive(bp, slot, slot_num);
-        bitmap_print_bit(bp);
-        void *recv_addr = NULL;
-        uint32_t recv_len = 0;
-        receive_release_signal(peer_fd, &recv_addr, &recv_len);
-        printf("recv_addr: %p\n", recv_addr);
-        printf("recv_len: %d\n", recv_len);
-        remote_addr_convert_slot_idx(recv_addr, recv_len, remote_res.mrs, mr_info_len, blk_size, &slot, &slot_num);
-        printf("slot_idx: %d\n", slot);
-        printf("slot_num: %d\n", slot_num);
-        bitmap_clear_consecutive(bp, slot, slot_num);
-        bitmap_print_bit(bp);
-
-        modify_qp_to_error(ctx.qps[0]);
-        modify_qp_to_reset(ctx.qps[0]);
-        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[1]);
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+        printf("Got recv cqe!!\n");
+        printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
         close(self_fd);
         close(peer_fd);
-        bitmap_deallocate(bp);
     }
     else
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
-        pre_post_dumb_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
-                               ctx.srqe);
-        /* modify_qp_init(ctx.qps[0], &local_res); */
-        /* modify_qp_init_to_rtr_qp_num_idx(ctx.qps[0], &local_res, &remote_res, 0); */
-        /* modify_qp_rtr_to_rts(ctx.qps[0], &local_res); */
+        ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
+        if (ret != RDMA_SUCCESS)
+        {
+            log_error("post recv request failed");
+        }
+
         struct ibv_wc wc;
         int wc_num = 0;
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+        printf("Got recv cqe!!\n");
+        printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
 
-        uint32_t slot_idx = wc.imm_data;
-        printf("slot: %d\n", slot_idx);
-        printf("length: %d\n", wc.byte_len);
-        printf("optcode: %d\n", wc.opcode);
-        printf("qp_num: %d\n", wc.qp_num);
-        void *addr;
-        slot_idx_to_addr(&local_res, wc.qp_num, slot_idx, ctx.remote_mrs_num / ctx.qp_num, blk_size, &addr);
-        printf("received addr: %p\n", addr);
-        printf("received content: %c\n", *(char *)addr);
-        send_release_signal(peer_fd, addr, wc.byte_len);
-        modify_qp_to_error(ctx.qps[0]);
-        modify_qp_to_reset(ctx.qps[0]);
-        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[1]);
+        ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
+        if (ret != RDMA_SUCCESS)
+        {
+            log_error("post recv request failed");
+        }
+
+        ret =
+            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        do
+        {
+        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
+        printf("Got send cqe!!\n");
 
         close(peer_fd);
     }
-
-    printf("finished setup connection\n");
-
     free(server_name);
     free(port);
     destroy_ib_res((&local_res));
