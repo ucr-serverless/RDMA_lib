@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     if (is_server)
     {
 
-        self_fd = sock_create_bind(port);
+        self_fd = sock_create_bind(NULL, port);
         assert(self_fd > 0);
         listen(self_fd, 5);
         peer_fd = accept(self_fd, (struct sockaddr *)&peer_addr, &peer_addr_len);

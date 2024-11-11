@@ -641,7 +641,7 @@ int connect_qp_server(struct IBRes *ib_res)
     struct QPInfo *local_qp_info = NULL;
     struct QPInfo *remote_qp_info = NULL;
 
-    config_info.self_sockfd = sock_create_bind(config_info.sock_port);
+    config_info.self_sockfd = sock_create_bind(NULL, config_info.sock_port);
     check(config_info.self_sockfd > 0, "Failed to create server socket.");
     listen(config_info.self_sockfd, 5);
 

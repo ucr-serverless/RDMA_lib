@@ -26,11 +26,13 @@ int main(int argc, char *argv[])
     static struct option long_options[] = {
         {"server_ip", required_argument, NULL, 1},
         {"port", required_argument, NULL, 2},
+        {"local_ip", required_argument, NULL, 3},
     };
 
     int ch = 0;
     bool is_server = true;
     char *server_name = NULL;
+    char *local_ip = NULL;
 
     char *port = NULL;
     while ((ch = getopt_long(argc, argv, "", long_options, NULL)) != -1)
@@ -40,6 +42,9 @@ int main(int argc, char *argv[])
         case 1:
             is_server = false;
             server_name = strdup(optarg);
+            break;
+        case 3:
+            local_ip = strdup(optarg);
             break;
         case 2:
             port = strdup(optarg);
@@ -93,7 +98,7 @@ int main(int argc, char *argv[])
     if (is_server)
     {
 
-        self_fd = sock_create_bind(port);
+        self_fd = sock_create_bind(local_ip, port);
         assert(self_fd > 0);
         listen(self_fd, 5);
         peer_fd = accept(self_fd, (struct sockaddr *)&peer_addr, &peer_addr_len);
@@ -105,8 +110,8 @@ int main(int argc, char *argv[])
     else
     {
         peer_fd = sock_create_connect(server_name, port);
-        recv_ib_res(&remote_res, peer_fd);
         send_ib_res(&local_res, peer_fd);
+        recv_ib_res(&remote_res, peer_fd);
     }
 
 #ifdef DEBUG
@@ -205,6 +210,7 @@ int main(int argc, char *argv[])
         close(peer_fd);
     }
     free(server_name);
+    free(local_ip);
     free(port);
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));

@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#define MAX_N_SGE 50
 
 struct ib_ctx
 {

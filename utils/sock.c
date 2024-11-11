@@ -62,7 +62,7 @@ ssize_t sock_write(int sock_fd, void *buffer, size_t len)
     return tot_written;
 }
 
-int sock_create_bind(char *port)
+int sock_create_bind(char * ip, char *port)
 {
     struct addrinfo hints;
     struct addrinfo *result, *rp;
@@ -74,7 +74,7 @@ int sock_create_bind(char *port)
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_PASSIVE;
 
-    ret = getaddrinfo(NULL, port, &hints, &result);
+    ret = getaddrinfo(ip, port, &hints, &result);
     check(ret == 0, "getaddrinfo error.");
 
     for (rp = result; rp != NULL; rp = rp->ai_next)
@@ -90,7 +90,8 @@ int sock_create_bind(char *port)
         {
             perror("setsockopt(SO_REUSEADDR) failed");
             close(sock_fd);
-            return -1;
+            sock_fd = -1;
+            continue;
         }
 
         ret = bind(sock_fd, rp->ai_addr, rp->ai_addrlen);
