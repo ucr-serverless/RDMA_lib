@@ -29,7 +29,6 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         log_error(" If device exists, check if driver is up\n");
         goto error;
     }
-    assert(params->device_idx);
     ctx->device = dev_list[params->device_idx];
     if (unlikely(!(ctx->device)))
     {
