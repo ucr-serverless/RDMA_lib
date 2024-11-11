@@ -47,5 +47,12 @@ To use this example on single node, use
 
 The `port` and the `server_ip` parameter can be changed to run separately on different machine.
 
+To use specific interface for the socket connection, the option `local_ip` can be used.
+
+```bash
+./bin/ping_pong --port 10000 --local_ip 10.10.0.1 # server
+./bin/ping_pong --port 10000 --server_ip 10.10.0.1 --local_ip 10.10.0.2 # client
+```
+
 The client will establish socket connection to the server first.
 Then client and server will establish RC RDMA connection.
