@@ -39,7 +39,7 @@ TEST_OBJS=$(TEST_FILES:.c=.o)
 PERF_OBJS=$(PERF_FILES:.c=.o)
 UNITY_OBJS=$(UNITY_FILES:.c=.o)
 
-PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list $(BIN_DIR)/sg_list_perf $(BIN_DIR)/ping_pong
+PROG=$(BIN_DIR)/rdma-bench $(BIN_DIR)/rc_connection $(BIN_DIR)/test_bitmap $(BIN_DIR)/sg_list $(BIN_DIR)/sg_list_perf $(BIN_DIR)/ping_pong $(BIN_DIR)/test_socket
 
 TEST_EXEC=$(patsubst $(TEST_DIR)/%.c,$(BIN_DIR)/%,$(TEST_FILES))
 
@@ -78,6 +78,10 @@ $(BIN_DIR)/test_bitmap: $(EXAMPLE_DIR)/test_bitmap.o $(EXAMPLE_DIR)/bitmap.o
 $(BIN_DIR)/ping_pong: $(SRC_OBJS)
 	@mkdir -p $(BIN_DIR)
 	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/ping_pong.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
+
+$(BIN_DIR)/test_socket: $(SRC_OBJS)
+	@mkdir -p $(BIN_DIR)
+	@$(CC) $(CFLAGS) $(INCLUDES) -o $@ $(EXAMPLE_DIR)/test_socket.o $(SRC_OBJS) $(LDFLAGS) $(LDLIBS)
 
 $(TEST_EXEC): $(filter-out main.o, $(SRC_OBJS)) $(TEST_OBJS) $(UNITY_OBJS)
 	@mkdir -p $(BIN_DIR)
