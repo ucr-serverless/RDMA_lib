@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
         peer_fd = accept(self_fd, (struct sockaddr *)&peer_addr, &peer_addr_len);
         assert(peer_fd > 0);
 
-        send_ib_res(&local_res, peer_fd);
         recv_ib_res(&remote_res, peer_fd);
+        send_ib_res(&local_res, peer_fd);
     }
     else
     {
@@ -180,11 +180,13 @@ int main(int argc, char *argv[])
     else
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        printf("post share receive queue\n");
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
-            log_error("post recv request failed");
+            log_debug("post recv request failed");
         }
+        printf("wait for incoming request\n");
 
         struct ibv_wc wc;
         int wc_num = 0;
