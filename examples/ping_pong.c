@@ -57,10 +57,10 @@ int main(int argc, char *argv[])
     // on xl170, the device_idx should be 3, on c6525-25g, the device_idx should be 2.
 
     struct rdma_param rparams = {
-        .device_idx = 3,
+        .device_idx = 0,
         .sgid_idx = 3,
         .ib_port = 1,
-        .qp_num = 2,
+        .qp_num = 1,
         .remote_mr_num = 2,
         .remote_mr_size = MR_SIZE,
         .init_cqe_num = 128,
