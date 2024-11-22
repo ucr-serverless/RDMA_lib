@@ -45,3 +45,7 @@ cfg/*.bak
 # compile files
 compile_commands.json
 .cache/
+
+# ofed installation
+MLNX_OFED_LINUX*/
+ofed.tgz
