@@ -1,5 +1,5 @@
 #include "client.h"
-#include "debug.h"
+#include "log.h"
 #include "rdma-bench_cfg.h"
 #include "server.h"
 #include "setup_ib.h"
@@ -152,8 +152,6 @@ int init_env(struct ConfigInfo *config_info)
     log_fp = fopen(fname, "w");
     check(log_fp != NULL, "Failed to open log file");
 
-    log(LOG_HEADER, "IB Echo Server");
-
     return 0;
 error:
     return -1;
@@ -161,7 +159,6 @@ error:
 
 void destroy_env()
 {
-    log(LOG_HEADER, "Run Finished");
     if (log_fp != NULL)
     {
         fclose(log_fp);

@@ -1,5 +1,5 @@
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "qp.h"
 #include "rdma_config.h"
 #include "sock.h"

@@ -1,10 +1,10 @@
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "qp.h"
 #include "rdma_config.h"
 #include "sock.h"
-#include <assert.h>
 #include <arpa/inet.h>
+#include <assert.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <infiniband/verbs.h>
@@ -23,19 +23,27 @@ int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
-    static struct option long_options[] = {
-        {"server_ip", required_argument, NULL, 1},
-        {"port", required_argument, NULL, 2},
-        {"local_ip", required_argument, NULL, 3},
-    };
+    static struct option long_options[] = {{"server_ip", required_argument, NULL, 1},
+                                           {"port", required_argument, NULL, 2},
+                                           {"local_ip", required_argument, NULL, 3},
+                                           {"sgid_index", required_argument, 0, 'x'},
+                                           {"help", no_argument, 0, 'h'},
+                                           {"device_index", required_argument, 0, 'd'},
+                                           {"ib_port", required_argument, 0, 'i'},
+                                           {0, 0, 0, 0}};
+    int option_index = 0;
 
     int ch = 0;
     bool is_server = true;
     char *server_name = NULL;
     char *local_ip = NULL;
+    char *usage = "";
+    int ib_port = 0;
+    int device_idx = 0;
+    int sgid_idx = 0;
 
     char *port = NULL;
-    while ((ch = getopt_long(argc, argv, "", long_options, NULL)) != -1)
+    while ((ch = getopt_long(argc, argv, "h:i:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)
         {
@@ -49,6 +57,18 @@ int main(int argc, char *argv[])
         case 2:
             port = strdup(optarg);
             break;
+        case 'h':
+            printf("usage: %s", usage);
+            break;
+        case 'i':
+            ib_port = atoi(optarg);
+            break;
+        case 'd':
+            device_idx = atoi(optarg);
+            break;
+        case 'x':
+            sgid_idx = atoi(optarg);
+            break;
         case '?':
             printf("options error\n");
             exit(1);
@@ -57,9 +77,9 @@ int main(int argc, char *argv[])
     // on xl170, the device_idx should be 3, on c6525-25g, the device_idx should be 2.
 
     struct rdma_param rparams = {
-        .device_idx = 0,
-        .sgid_idx = 3,
-        .ib_port = 1,
+        .device_idx = device_idx,
+        .sgid_idx = sgid_idx,
+        .ib_port = ib_port,
         .qp_num = 1,
         .remote_mr_num = 2,
         .remote_mr_size = MR_SIZE,

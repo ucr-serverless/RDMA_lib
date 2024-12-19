@@ -185,15 +185,12 @@ void free_config_info(struct ConfigInfo *config_info)
 
 void print_config_info()
 {
-    log(LOG_SUB_HEADER, "Configuraion");
 
     if (config_info.is_server)
     {
-        log("is_server = %s", "true");
+        log_info("is_server = %s", "true");
     }
-    log("msg_size                  = %d", config_info.msg_size);
-    log("num_concurr_msgs          = %d", config_info.num_concurr_msgs);
-    log("sock_port                 = %s", config_info.sock_port);
-
-    log(LOG_SUB_HEADER, "End of Configuraion");
+    log_info("msg_size                  = %d", config_info.msg_size);
+    log_info("num_concurr_msgs          = %d", config_info.num_concurr_msgs);
+    log_info("sock_port                 = %s", config_info.sock_port);
 }

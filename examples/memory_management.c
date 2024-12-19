@@ -1,7 +1,7 @@
 #include "memory_management.h"
 #include "bitmap.h"
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "sock.h"
 #include "utils.h"
 #include <sched.h>

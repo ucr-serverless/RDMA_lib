@@ -1,5 +1,5 @@
 #include "qp.h"
-#include "debug.h"
+#include "log.h"
 #include "rdma_config.h"
 #include "utils.h"
 #include <infiniband/verbs.h>

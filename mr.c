@@ -1,5 +1,5 @@
 #include "mr.h"
-#include "debug.h"
+#include "log.h"
 #include "utils.h"
 #include <infiniband/verbs.h>
 #include <stdbool.h>

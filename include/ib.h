@@ -29,6 +29,7 @@ struct ib_ctx
     struct ibv_cq *send_cq;
     struct ibv_cq *recv_cq;
     struct ibv_comp_channel *send_channel;
+    struct ibv_comp_channel *recv_channel;
     struct ibv_device_attr device_attr;
     struct ibv_port_attr port_attr;
     int sgid_idx;

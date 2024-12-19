@@ -1,6 +1,6 @@
-#include "debug.h"
 #include "examples/bitmap.h"
 #include "ib.h"
+#include "log.h"
 #include "memory_management.h"
 #include "qp.h"
 #include "rdma_config.h"

@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "qp.h"
 #include "rdma_config.h"
 #include "setup_ib.h"
@@ -102,7 +102,6 @@ void *client_thread_write_signaled(void *arg)
 
     buf_offset = 0;
     roffset = 0;
-    debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
 
     long int opt_count = 0;
     bool stop = false;
@@ -234,7 +233,6 @@ void *client_thread_write_unsignaled(void *arg)
 
     buf_offset = 0;
     roffset = 0;
-    debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
     long int warm_up_iter = config_info.warm_up_iter;
     long int total_iter = config_info.total_iter;
     int signal_freq = config_info.signal_freq;
@@ -396,8 +394,6 @@ void *client_thread_write_imm_signaled(void *arg)
 
     log_debug("thread: ready to send");
 
-    debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
-
     stop = false;
     buf_offset = 0;
     roffset = 0;
@@ -533,7 +529,6 @@ void *client_thread_write_imm_unsignaled(void *arg)
     }
 
     buf_offset = 0;
-    debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
     long int warm_up_iter = config_info.warm_up_iter;
     long int total_iter = config_info.total_iter;
     int signal_freq = config_info.signal_freq;
@@ -761,7 +756,7 @@ void *client_thread_send_signaled(void *arg)
     throughput = (double)(config_info.total_iter - config_info.warm_up_iter) / duration;
     latency = duration * 1000000 / (double)(config_info.total_iter - config_info.warm_up_iter);
 
-    log("thread: throughput = %f (ops/s)", throughput);
+    log_info("thread: throughput = %f (ops/s)", throughput);
     printf("thread: throughput = %f (ops/s) %f (Bytes/s)\n", throughput, throughput * msg_size);
     printf("latency: %f usec", latency);
 
@@ -853,7 +848,6 @@ void *client_thread_send_unsignaled(void *arg)
     }
 
     buf_offset = 0;
-    debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
     long int warm_up_iter = config_info.warm_up_iter;
     long int total_iter = config_info.total_iter;
     int signal_freq = config_info.signal_freq;
@@ -947,8 +941,6 @@ int run_client(struct IBRes *ib_res)
     void *status;
     void *(*client_thread_func)(void *) = NULL;
     int benchmark_type = config_info.benchmark_type;
-
-    log(LOG_SUB_HEADER, "Run Client");
 
     /* initialize threads */
     pthread_attr_init(&attr);
@@ -1077,7 +1069,6 @@ int connect_qp_client(struct IBRes *ib_res)
     /* change QP state to RTS */
     /* send qp_info to client */
     int peer_ind = -1;
-    log(LOG_SUB_HEADER, "IB Config");
     for (i = 0; i < num_peers; i++)
     {
         peer_ind = 0;
@@ -1094,10 +1085,9 @@ int connect_qp_client(struct IBRes *ib_res)
 
         ret = modify_qp_to_rts(ib_res->qp[peer_ind], &local_qp_info[peer_ind], &remote_qp_info[i]);
         check(ret == 0, "Failed to modify qp[%d] to rts", peer_ind);
-        log("\tLocal qp[%" PRIu32 "] <-> Remote qp[%" PRIu32 "]", ib_res->qp[peer_ind]->qp_num,
-            remote_qp_info[i].qp_num);
+        log_info("\tLocal qp[%" PRIu32 "] <-> Remote qp[%" PRIu32 "]", ib_res->qp[peer_ind]->qp_num,
+                 remote_qp_info[i].qp_num);
     }
-    log(LOG_SUB_HEADER, "End of IB Config");
 
     /* sync with server */
     for (i = 0; i < num_peers; i++)

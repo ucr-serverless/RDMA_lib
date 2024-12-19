@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "debug.h"
+#include "log.h"
 #include "sock.h"
 
 ssize_t sock_read(int sock_fd, void *buffer, size_t len)
@@ -62,7 +62,7 @@ ssize_t sock_write(int sock_fd, void *buffer, size_t len)
     return tot_written;
 }
 
-int sock_create_bind(char * ip, char *port)
+int sock_create_bind(char *ip, char *port)
 {
     struct addrinfo hints;
     struct addrinfo *result, *rp;
@@ -75,7 +75,11 @@ int sock_create_bind(char * ip, char *port)
     hints.ai_flags = AI_PASSIVE;
 
     ret = getaddrinfo(ip, port, &hints, &result);
-    check(ret == 0, "getaddrinfo error.");
+    if (ret != 0)
+    {
+        log_error("Error, fail to create sock bind");
+        goto error;
+    }
 
     for (rp = result; rp != NULL; rp = rp->ai_next)
     {
@@ -105,7 +109,11 @@ int sock_create_bind(char * ip, char *port)
         sock_fd = -1;
     }
 
-    check(rp != NULL, "creating socket.");
+    if (rp == NULL)
+    {
+        log_error("Error, create socket");
+        goto error;
+    }
 
     freeaddrinfo(result);
     return sock_fd;
@@ -133,7 +141,11 @@ int sock_create_connect(char *server_name, char *port)
     hints.ai_family = AF_UNSPEC;
 
     ret = getaddrinfo(server_name, port, &hints, &result);
-    check(ret == 0, "[ERROR] %s", gai_strerror(ret));
+    if (ret != 0)
+    {
+        log_error("Error, create sock %s", gai_strerror(ret));
+        goto error;
+    }
 
     for (rp = result; rp != NULL; rp = rp->ai_next)
     {
@@ -154,7 +166,11 @@ int sock_create_connect(char *server_name, char *port)
         sock_fd = -1;
     }
 
-    check(rp != NULL, "could not connect.");
+    if (rp == NULL)
+    {
+        log_error("Error, could not connect sock");
+        goto error;
+    }
 
     freeaddrinfo(result);
     return sock_fd;

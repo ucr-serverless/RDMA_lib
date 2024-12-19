@@ -1,7 +1,7 @@
 #ifndef BENCHMARK_CFG_
 #define BENCHMARK_CFG_
 
-#include "debug.h"
+#include "log.h"
 #include "sock.h"
 #include "utils.h"
 #include <assert.h>

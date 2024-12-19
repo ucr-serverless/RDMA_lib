@@ -8,8 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "mr.h"
 #include "qp.h"
 #include "rdma_config.h"
@@ -99,12 +99,19 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
 
     ctx->send_cqe = ctx->send_cq->cqe;
 
+    ctx->recv_channel = ibv_create_comp_channel(ctx->context);
+    if (unlikely(!(ctx->recv_channel)))
+    {
+        log_error("Error, ibv_create_comp_channel() failed\n");
+        goto error;
+    }
+
     init_cqe = params->init_cqe_num;
 
     retry_cnt = 0;
     do
     {
-        ctx->recv_cq = ibv_create_cq(ctx->context, init_cqe, NULL, NULL, 0);
+        ctx->recv_cq = ibv_create_cq(ctx->context, init_cqe, NULL, ctx->recv_channel, 0);
         init_cqe /= 2;
         retry_cnt++;
     } while (!ctx->send_cq && retry_cnt < RETRY_MAX);

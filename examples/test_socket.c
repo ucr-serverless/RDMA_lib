@@ -1,8 +1,8 @@
 
 #include "ib.h"
 #include "sock.h"
-#include <assert.h>
 #include <arpa/inet.h>
+#include <assert.h>
 #include <bits/getopt_core.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -14,7 +14,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 int main(int argc, char *argv[])
 {
 
@@ -25,7 +24,7 @@ int main(int argc, char *argv[])
     };
 
     char buffer[128];
-    char * message = "hello from server";
+    char *message = "hello from server";
     int ch = 0;
     bool is_server = true;
     char *server_name = NULL;

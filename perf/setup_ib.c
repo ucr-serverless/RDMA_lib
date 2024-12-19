@@ -7,7 +7,7 @@
 #include <malloc.h>
 #include <unistd.h>
 
-#include "debug.h"
+#include "log.h"
 #include "mr.h"
 #include "setup_ib.h"
 

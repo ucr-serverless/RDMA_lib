@@ -6,8 +6,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "debug.h"
 #include "ib.h"
+#include "log.h"
 #include "qp.h"
 #include "rdma-bench_cfg.h"
 #include "server.h"
@@ -607,7 +607,7 @@ int run_server(struct IBRes *ib_res)
     if ((long)status != 0)
     {
         thread_ret_normally = false;
-        log("server_thread: failed to execute");
+        log_debug("server_thread: failed to execute");
     }
 
     if (thread_ret_normally == false)
@@ -697,7 +697,6 @@ int connect_qp_server(struct IBRes *ib_res)
     }
 
     /* change send QP state to RTS */
-    log(LOG_SUB_HEADER, "Start of IB Config");
     for (i = 0; i < num_peers; i++)
     {
         peer_ind = 0;
@@ -714,10 +713,9 @@ int connect_qp_server(struct IBRes *ib_res)
 
         ret = modify_qp_to_rts(ib_res->qp[peer_ind], &local_qp_info[peer_ind], &remote_qp_info[i]);
         check(ret == 0, "Failed to modify qp[%d] to rts", peer_ind);
-        log("\tLocal qp[%" PRIu32 "] <-> Remote qp[%" PRIu32 "]", ib_res->qp[peer_ind]->qp_num,
-            remote_qp_info[i].qp_num);
+        log_info("\tLocal qp[%" PRIu32 "] <-> Remote qp[%" PRIu32 "]", ib_res->qp[peer_ind]->qp_num,
+                 remote_qp_info[i].qp_num);
     }
-    log(LOG_SUB_HEADER, "End of IB Config");
 
     /* sync with clients */
     for (i = 0; i < num_peers; i++)
