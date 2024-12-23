@@ -199,40 +199,68 @@ int main(int argc, char *argv[])
         }
 
         int send_fd = ctx.send_channel->fd;
-        int ep_sd = epoll_create1(0);
+        int ep = epoll_create1(0);
         int recv_fd = ctx.recv_channel->fd;
-        int ep_rc = epoll_create1(0);
-        assert(ep_sd > 0);
-        assert(ep_rc > 0);
+        assert(ep > 0);
 
         struct epoll_event ep_ev_sd = {
             .events = EPOLLIN,
-            .data.fd = send_fd,
+            .data.ptr = ctx.send_channel,
         };
         struct epoll_event ep_ev_rc = {
             .events = EPOLLIN,
-            .data.fd = recv_fd,
+            .data.ptr = ctx.recv_channel,
         };
-        epoll_ctl(ep_sd, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
-        epoll_ctl(ep_rc, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
+        epoll_ctl(ep, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
+        epoll_ctl(ep, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
 
         strncpy(local_res.mrs[0].addr, test_str, MR_SIZE);
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
-        struct ibv_wc wc;
-        int wc_num = 0;
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("Got send cqe!!\n");
+        int tt_ev = 0;
+        while(tt_ev < 2) {
+            struct epoll_event events[2];
+            int n = epoll_wait(ep, events, 2, -1);
+            if (n < 0) {
+                log_error("epoll wait error");
+            }
+            tt_ev += n;
+            for (size_t i = 0; i < n; i++) {
+                if (events[i].events & EPOLLIN) {
+                    struct ibv_cq *ev_cq;
 
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-        printf("Got recv cqe!!\n");
+                    void *ev_ctx;
+                    ret = ibv_get_cq_event(events[i].data.ptr, &ev_cq, &ev_ctx);
+                    if (ret) {
+                        fprintf(stderr, "Failed to get CQ event\n");
+                        return -1;
+                    }
+
+                    /* Acknowledge the CQ event */
+                    ibv_ack_cq_events(ev_cq, 1);
+
+                    /* Re-request CQ notifications */
+                    ret = ibv_req_notify_cq(ev_cq, 0);
+                    if (ret) {
+                        fprintf(stderr, "Couldn't request CQ notification\n");
+                        return -1;
+                    }
+                    struct ibv_wc wc;
+                    int wc_num = 0;
+                    do
+                    {
+                    } while ((wc_num = ibv_poll_cq(ev_cq, 1, &wc) == 0));
+                    printf("Got event !!\n");
+                }
+
+            }
+        }
+
+
         printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
+        close(ep);
         close(self_fd);
         close(peer_fd);
     }
