@@ -205,15 +205,14 @@ int main(int argc, char *argv[])
         assert(ep_sd > 0);
         assert(ep_rc > 0);
 
-        struct epoll_event ep_ev_sd, ep_ev_rc;
-        ep_ev_sd = {
+        struct epoll_event ep_ev_sd = {
             .events = EPOLLIN,
             .data.fd = send_fd,
-        }
-        ep_ev_rc = {
+        };
+        struct epoll_event ep_ev_rc = {
             .events = EPOLLIN,
             .data.fd = recv_fd,
-        }
+        };
         epoll_ctl(ep_sd, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
         epoll_ctl(ep_rc, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
 
