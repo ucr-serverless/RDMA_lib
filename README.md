@@ -27,7 +27,7 @@ For example, follow the setting in the picture, we should be using `python exp1.
 
 ## scripts
 
-### get_cloudlab_node_settings.py
+### `get_cloudlab_node_settings.py`
 
 ```bash
 python3 ./scripts/get_cloudlab_node_settings.py
@@ -36,32 +36,52 @@ You will get the information needed for RDMA connection establishment, like devi
 
 ## examples
 
-### ping_pong
+### `ping_pong`
 
-Compile the library with `make all`
+The server will post a two side send request to client.
+After receiving the request, client will post back a send request.
 
-Change the `-d`, `-x`, `-i` of command line parameter according to previous section.
+Compile the library with `make all`.
+
+Change the `-d`, `-x`, `-i` of command line parameter according to the instruction from [determine RDMA specific settings](#determine-rdma-specific-settings).
 
 `-d` is the device index, `-x` is the sgid index, `-i` is the ib port.
 This example involves two nodes, one server and one client.
 
-First, we should check the RDMA parameter settings, and use the IP bound to the RDMA setting we choose as the server local IP(-L option).
+Assuming the picture bellow is from the client machine.
+We can determine the RDMA specific settings accordingly.
+The interface we are using is bound to IP `10.10.1.2`.
 
-The client will use this IP in its (-H option) to denote the server destination.
+Assuming on the server machine, whose IP is `10.10.1.1`.
+The client will use this IP (in its -H option) as the server destination.
 
-If we use the example in picture ![](./figures/gid_instruction.png)
+![](./figures/gid_instruction.png)
 
 ```bash
 # client side
-./bin/ping_pong -L 10.10.1.1 -port 10001  -i 1 -x 3 -d 2
+./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
 # server side
 ./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
 
 The `-L` parameter is used by server to denote its port for RDMA request and also socket connection.
+In our example it will be `10.10.1.1`
 
-The `-p` and the `-H` parameter can be changed to run separately on different machine.
+The `-p` is the port to be used to establish connection, which should be set to be the same on both server and client side.
+
+### `ping_pong_cmplt_cnt` 
+
+The functionalities and parameters are similar to `ping_pong binary`.
+The only difference is the `ping_pong` use `ibv_poll_cq` to poll the completion queue.
+
+The `ping_pong_cmplt_cnl` use completion channel and epoll.
 
 
-The client will establish socket connection to the server first.
-Then client and server will establish RC RDMA connection.
+Actually, they are interchangeable to each other. For example:
+
+```bash
+# server
+./bin/ping_pong_cmplt_cnl -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
+# client
+./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
+```

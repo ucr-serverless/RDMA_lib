@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
-    static struct option long_options[] = {{"server_ip", required_argument, NULL, 1},
-                                           {"port", required_argument, NULL, 2},
-                                           {"local_ip", required_argument, NULL, 3},
+    static struct option long_options[] = {{"server_ip", required_argument, NULL, 'H'},
+                                           {"port", required_argument, NULL, 'p'},
+                                           {"local_ip", required_argument, NULL, 'L'},
                                            {"sgid_index", required_argument, 0, 'x'},
                                            {"help", no_argument, 0, 'h'},
                                            {"device_index", required_argument, 0, 'd'},
@@ -45,18 +45,18 @@ int main(int argc, char *argv[])
     int sgid_idx = 0;
 
     char *port = NULL;
-    while ((ch = getopt_long(argc, argv, "h:i:d:x:", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(argc, argv, "H:L:p:h:i:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)
         {
-        case 1:
+        case 'H':
             is_server = false;
             server_name = strdup(optarg);
             break;
-        case 3:
+        case 'L':
             local_ip = strdup(optarg);
             break;
-        case 2:
+        case 'p':
             port = strdup(optarg);
             break;
         case 'h':
@@ -220,8 +220,14 @@ int main(int argc, char *argv[])
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
         int tt_ev = 0;
+        struct ibv_wc wc[5];
+        int wc_num = 0;
+        // In this example, there should be two completion event generate.
+        // One from the send_cq(the completion of post_send)
+        // One from the recv_cq(The completion of client send)
         while(tt_ev < 2) {
             struct epoll_event events[2];
+            // wait for the epoll with maximum 2 event
             int n = epoll_wait(ep, events, 2, -1);
             if (n < 0) {
                 log_error("epoll wait error");
@@ -232,6 +238,8 @@ int main(int argc, char *argv[])
                     struct ibv_cq *ev_cq;
 
                     void *ev_ctx;
+                    // get the corresponding CQ from the completion channel
+                    // ev_ctx does not have meaning here because we don't set CQ context when we crate CQ.
                     ret = ibv_get_cq_event(events[i].data.ptr, &ev_cq, &ev_ctx);
                     if (ret) {
                         fprintf(stderr, "Failed to get CQ event\n");
@@ -242,16 +250,22 @@ int main(int argc, char *argv[])
                     ibv_ack_cq_events(ev_cq, 1);
 
                     /* Re-request CQ notifications */
+                    // avoid receive live lock
                     ret = ibv_req_notify_cq(ev_cq, 0);
                     if (ret) {
                         fprintf(stderr, "Couldn't request CQ notification\n");
                         return -1;
                     }
-                    struct ibv_wc wc;
-                    int wc_num = 0;
+                    // consume all elements from the completion queue.
+                    // The elements could be consumed in previous poll
                     do
                     {
-                    } while ((wc_num = ibv_poll_cq(ev_cq, 1, &wc) == 0));
+                        wc_num = ibv_poll_cq(ev_cq, 5, wc);
+                        if (wc_num < 0) {
+                            log_error("poll cq error");
+                            exit(1);
+                        }
+                    } while (wc_num > 0);
                     printf("Got event !!\n");
                 }
 
