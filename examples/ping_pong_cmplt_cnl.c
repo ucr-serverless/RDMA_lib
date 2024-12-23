@@ -14,10 +14,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/epoll.h>
 
 #define MR_SIZE 10240
 
@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
-    static struct option long_options[] = {{"server_ip", required_argument, NULL, 1},
-                                           {"port", required_argument, NULL, 2},
-                                           {"local_ip", required_argument, NULL, 3},
+    static struct option long_options[] = {{"server_ip", required_argument, NULL, 'H'},
+                                           {"port", required_argument, NULL, 'p'},
+                                           {"local_ip", required_argument, NULL, 'L'},
                                            {"sgid_index", required_argument, 0, 'x'},
                                            {"help", no_argument, 0, 'h'},
                                            {"device_index", required_argument, 0, 'd'},
@@ -45,18 +45,18 @@ int main(int argc, char *argv[])
     int sgid_idx = 0;
 
     char *port = NULL;
-    while ((ch = getopt_long(argc, argv, "h:i:d:x:", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(argc, argv, "H:L:p:h:i:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)
         {
-        case 1:
+        case 'H':
             is_server = false;
             server_name = strdup(optarg);
             break;
-        case 3:
+        case 'L':
             local_ip = strdup(optarg);
             break;
-        case 2:
+        case 'p':
             port = strdup(optarg);
             break;
         case 'h':
@@ -179,60 +179,120 @@ int main(int argc, char *argv[])
         const char *test_str = "Hello, world!";
 
         ret = ibv_req_notify_cq(ctx.send_cq, 0);
-        if (ret) {
+        if (ret)
+        {
             log_error("could not create send CQ notification");
         }
         ret = ibv_req_notify_cq(ctx.recv_cq, 0);
-        if (ret) {
+        if (ret)
+        {
             log_error("could not create recv CQ notification");
         }
         int flags;
         flags = fcntl(ctx.send_channel->fd, F_GETFL);
         ret = fcntl(ctx.send_channel->fd, F_SETFL, flags | O_NONBLOCK);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             log_error("failed to change the file descriptor");
         }
         flags = fcntl(ctx.recv_channel->fd, F_GETFL);
         ret = fcntl(ctx.recv_channel->fd, F_SETFL, flags | O_NONBLOCK);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             log_error("failed to change the file descriptor");
         }
 
         int send_fd = ctx.send_channel->fd;
-        int ep_sd = epoll_create1(0);
+        int ep = epoll_create1(0);
         int recv_fd = ctx.recv_channel->fd;
-        int ep_rc = epoll_create1(0);
-        assert(ep_sd > 0);
-        assert(ep_rc > 0);
+        assert(ep > 0);
 
         struct epoll_event ep_ev_sd = {
             .events = EPOLLIN,
-            .data.fd = send_fd,
+            .data.ptr = ctx.send_channel,
         };
         struct epoll_event ep_ev_rc = {
             .events = EPOLLIN,
-            .data.fd = recv_fd,
+            .data.ptr = ctx.recv_channel,
         };
-        epoll_ctl(ep_sd, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
-        epoll_ctl(ep_rc, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
+        epoll_ctl(ep, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
+        epoll_ctl(ep, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
 
         strncpy(local_res.mrs[0].addr, test_str, MR_SIZE);
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
-        struct ibv_wc wc;
+        int tt_ev = 0;
+        struct ibv_wc wc[5];
         int wc_num = 0;
-        do
+        // In this example, there should be two completion event generate.
+        // One from the send_cq(the completion of post_send)
+        // One from the recv_cq(The completion of client send)
+        while (tt_ev < 2)
         {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("Got send cqe!!\n");
+            struct epoll_event events[2];
+            // wait for the epoll with maximum 2 event
+            int n = epoll_wait(ep, events, 2, -1);
+            if (n < 0)
+            {
+                log_error("epoll wait error");
+            }
+            tt_ev += n;
+            for (size_t i = 0; i < n; i++)
+            {
+                if (events[i].events & EPOLLIN)
+                {
+                    struct ibv_cq *ev_cq;
 
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-        printf("Got recv cqe!!\n");
-        printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
+                    void *ev_ctx;
+                    // get the corresponding CQ from the completion channel
+                    // ev_ctx does not have meaning here because we don't set CQ context when we crate CQ.
+                    ret = ibv_get_cq_event(events[i].data.ptr, &ev_cq, &ev_ctx);
+                    if (ret)
+                    {
+                        fprintf(stderr, "Failed to get CQ event\n");
+                        return -1;
+                    }
+
+                    /* Acknowledge the CQ event */
+                    ibv_ack_cq_events(ev_cq, 1);
+
+                    /* Re-request CQ notifications */
+                    // avoid receive live lock
+                    ret = ibv_req_notify_cq(ev_cq, 0);
+                    if (ret)
+                    {
+                        fprintf(stderr, "Couldn't request CQ notification\n");
+                        return -1;
+                    }
+                    // consume all elements from the completion queue.
+                    // The elements could be consumed in previous poll
+                    do
+                    {
+                        wc_num = ibv_poll_cq(ev_cq, 5, wc);
+                        if (wc_num < 0)
+                        {
+                            log_error("poll cq error");
+                            exit(1);
+                        }
+                    } while (wc_num > 0);
+                    if (ev_cq == ctx.send_cq)
+                    {
+                        printf("Got send cqe!!\n");
+                    }
+                    else if (ev_cq == ctx.recv_cq)
+                    {
+
+                        printf("Got recv cqe!!\n");
+                        printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
+                    }
+                    printf("Got event !!\n");
+                }
+            }
+        }
+
+        close(ep);
         close(self_fd);
         close(peer_fd);
     }
@@ -248,45 +308,113 @@ int main(int argc, char *argv[])
         printf("wait for incoming request\n");
 
         ret = ibv_req_notify_cq(ctx.send_cq, 0);
-        if (ret) {
+        if (ret)
+        {
             log_error("could not create send CQ notification");
         }
         ret = ibv_req_notify_cq(ctx.recv_cq, 0);
-        if (ret) {
+        if (ret)
+        {
             log_error("could not create recv CQ notification");
         }
         int flags;
+        // set the fd to be nonblocking
         flags = fcntl(ctx.send_channel->fd, F_GETFL);
         ret = fcntl(ctx.send_channel->fd, F_SETFL, flags | O_NONBLOCK);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             log_error("failed to change the file descriptor");
         }
         flags = fcntl(ctx.recv_channel->fd, F_GETFL);
         ret = fcntl(ctx.recv_channel->fd, F_SETFL, flags | O_NONBLOCK);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             log_error("failed to change the file descriptor");
         }
-        struct ibv_wc wc;
-        int wc_num = 0;
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-        printf("Got recv cqe!!\n");
-        printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
+        int ep = epoll_create1(0);
+        int send_fd = ctx.send_channel->fd;
+        int recv_fd = ctx.recv_channel->fd;
+        assert(ep > 0);
 
-        ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
-        if (ret != RDMA_SUCCESS)
+        struct epoll_event ep_ev_sd = {
+            .events = EPOLLIN,
+            .data.ptr = ctx.send_channel,
+        };
+        struct epoll_event ep_ev_rc = {
+            .events = EPOLLIN,
+            .data.ptr = ctx.recv_channel,
+        };
+        epoll_ctl(ep, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
+        epoll_ctl(ep, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
+
+        struct ibv_wc wc[5];
+        int wc_num = 0;
+        int tt_ev = 0;
+        while (tt_ev < 2)
         {
-            log_error("post recv request failed");
+            struct epoll_event events[2];
+            // wait for the epoll with maximum 2 event
+            int n = epoll_wait(ep, events, 2, -1);
+            if (n < 0)
+            {
+                log_error("epoll wait error");
+            }
+            tt_ev += n;
+            for (size_t i = 0; i < n; i++)
+            {
+                if (events[i].events & EPOLLIN)
+                {
+                    struct ibv_cq *ev_cq;
+
+                    void *ev_ctx;
+                    // get the corresponding CQ from the completion channel
+                    // ev_ctx does not have meaning here because we don't set CQ context when we crate CQ.
+                    ret = ibv_get_cq_event(events[i].data.ptr, &ev_cq, &ev_ctx);
+                    if (ret)
+                    {
+                        fprintf(stderr, "Failed to get CQ event\n");
+                        return -1;
+                    }
+
+                    /* Acknowledge the CQ event */
+                    ibv_ack_cq_events(ev_cq, 1);
+
+                    /* Re-request CQ notifications */
+                    // avoid receive live lock
+                    ret = ibv_req_notify_cq(ev_cq, 0);
+                    if (ret)
+                    {
+                        fprintf(stderr, "Couldn't request CQ notification\n");
+                        return -1;
+                    }
+                    // consume all elements from the completion queue.
+                    // The elements could be consumed in previous poll
+                    do
+                    {
+                        wc_num = ibv_poll_cq(ev_cq, 5, wc);
+                        if (wc_num < 0)
+                        {
+                            log_error("poll cq error");
+                            exit(1);
+                        }
+                    } while (wc_num > 0);
+                    if (ev_cq == ctx.recv_cq)
+                    {
+                        printf("Got recv cqe!!\n");
+                        printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
+                        ret = post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length,
+                                                 local_res.mrs[0].lkey, 0, 0);
+                    }
+                    if (ev_cq == ctx.send_cq)
+                    {
+                        printf("Got send cqe!!\n");
+                    }
+                    printf("Got event !!\n");
+                }
+            }
         }
 
-        ret =
-            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("Got send cqe!!\n");
-
+        close(ep);
         close(peer_fd);
     }
     free(server_name);

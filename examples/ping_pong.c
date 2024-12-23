@@ -23,9 +23,9 @@ int main(int argc, char *argv[])
 {
     struct ib_ctx ctx;
 
-    static struct option long_options[] = {{"server_ip", required_argument, NULL, 1},
-                                           {"port", required_argument, NULL, 2},
-                                           {"local_ip", required_argument, NULL, 3},
+    static struct option long_options[] = {{"server_ip", required_argument, NULL, 'H'},
+                                           {"port", required_argument, NULL, 'p'},
+                                           {"local_ip", required_argument, NULL, 'L'},
                                            {"sgid_index", required_argument, 0, 'x'},
                                            {"help", no_argument, 0, 'h'},
                                            {"device_index", required_argument, 0, 'd'},
@@ -43,18 +43,18 @@ int main(int argc, char *argv[])
     int sgid_idx = 0;
 
     char *port = NULL;
-    while ((ch = getopt_long(argc, argv, "h:i:d:x:", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(argc, argv, "H:p:L:hi:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)
         {
-        case 1:
+        case 'H':
             is_server = false;
             server_name = strdup(optarg);
             break;
-        case 3:
+        case 'L':
             local_ip = strdup(optarg);
             break;
-        case 2:
+        case 'p':
             port = strdup(optarg);
             break;
         case 'h':
@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
         printf("post share receive queue\n");
+        // prepost receive request
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
@@ -210,12 +211,15 @@ int main(int argc, char *argv[])
 
         struct ibv_wc wc;
         int wc_num = 0;
+        // poll to get the completion event from recv_cq
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
         printf("Got recv cqe!!\n");
         printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
 
+        // it is a good practice to post receive request after it is consumed.
+        // In this example this one will not be consumed
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
@@ -224,6 +228,7 @@ int main(int argc, char *argv[])
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        // poll the send_cq for the ack of send.
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));

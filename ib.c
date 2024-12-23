@@ -259,7 +259,6 @@ void destroy_ib_ctx(struct ib_ctx *ctx)
     {
         ibv_destroy_comp_channel(ctx->recv_channel);
         ctx->recv_channel = NULL;
-
     }
     if (ctx->send_cq)
     {
