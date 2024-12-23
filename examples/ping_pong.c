@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
         printf("post share receive queue\n");
+        // prepost receive request
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
@@ -210,12 +211,15 @@ int main(int argc, char *argv[])
 
         struct ibv_wc wc;
         int wc_num = 0;
+        // poll to get the completion event from recv_cq
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
         printf("Got recv cqe!!\n");
         printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
 
+        // it is a good practice to post receive request after it is consumed.
+        // In this example this one will not be consumed
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
@@ -224,6 +228,7 @@ int main(int argc, char *argv[])
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        // poll the send_cq for the ack of send.
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
