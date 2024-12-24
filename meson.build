@@ -1,0 +1,18 @@
+RDMA_inc = include_directories('include', 'utils')
+
+src_files = files('ib.c', 
+  'mr.c',
+  'qp.c',
+  'utils/log.c',
+  'utils/sock.c',
+  'utils/utils.c')
+
+libRDMA_lib = static_library(
+  'RDMA_lib',  # Name of the library
+  src_files,     # Source files
+  include_directories: RDMA_inc,  # Include root directory
+  c_args: ['-Wall', '-Werror'],       # Additional compile flags
+  install: false                       # Whether to install the library
+)
+
+libRDMA_lib_dep = declare_dependency(include_directories: inc_dirs, link_with: libRDMA_lib)

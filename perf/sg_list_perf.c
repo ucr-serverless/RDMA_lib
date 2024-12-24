@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "ib.h"
 #include "qp.h"
 #include "rdma_config.h"

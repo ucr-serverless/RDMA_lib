@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "ib.h"
 #include "log.h"
 #include "qp.h"

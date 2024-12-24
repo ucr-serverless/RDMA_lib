@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include "rdma-bench_cfg.h"
+#include <unistd.h>
 
 struct ConfigInfo config_info;
 

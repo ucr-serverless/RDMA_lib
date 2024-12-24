@@ -481,7 +481,8 @@ int post_send_sg_list(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_li
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;
-};
+}
+
 int post_send(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data,
               int flag)
 {

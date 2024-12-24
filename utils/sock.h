@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <errno.h>
 
 #define SOCK_SYNC_MSG "sync"

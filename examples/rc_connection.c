@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "examples/bitmap.h"
 #include "ib.h"
 #include "log.h"

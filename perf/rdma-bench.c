@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "client.h"
 #include "log.h"
 #include "rdma-bench_cfg.h"
