@@ -1,10 +1,14 @@
 # RDMA lib
 
-To use the lib in makefile, add the following options during linkage
+To use the lib in makefile, add the following options to the ldflags
 
 ```
 -L/path/to/this/repo -lRDMA_lib -libverbs
 ```
+
+To use this library with a meson project, simply add `subdir('<path_to_this_lib>')` and then use the `libRDMA_lib_dep` in the dependencies of the compilation target.
+
+To develop this library(compile tests and perftest, etc), use the `make all` or `make debug`
 
 ## determine RDMA specific settings
 
