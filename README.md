@@ -1,10 +1,48 @@
 # RDMA lib
 
-To use the lib in makefile, add the following options during linkage
+
+## build the library
+
+```
+meson setup build
+ninja -C build/ -v
+```
+
+## integrate with other code base
+
+This project will be compiled as a static library to be linked with other codes.
+
+The static binary will be `libRDMA_lib.a` under the project directory after compilation.
+
+### make
+
 
 ```
 -L/path/to/this/repo -lRDMA_lib -libverbs
 ```
+
+To use this library with a meson project, simply add `subdir('<path_to_this_lib>')` and then use the `libRDMA_lib_dep` in the dependencies of the compilation target.
+
+
+Also add the `-I/path/to/RDMA_lib/include` to the cflags
+
+### meson
+
+Compile this code base to get the static library, then 
+
+```
+ibverbs_dep = dependency('libibverbs', required: true)
+incdir = include_directories('RDMA_lib/include')
+rdma_dep = declare_dependency(
+  include_directories: incdir,
+  link_args: ['-L' + root_dir + '/RDMA_lib', '-lRDMA_lib', ]
+  )
+```
+
+Add the incdir to the include_directories of your target, then add the `rdma_dep` to the dependencies of your target.
+
+Also this library requires the ibverbs library, so also add the `ibverbs_dep` to the dependencies of your target.
+
 
 ## determine RDMA specific settings
 
@@ -59,9 +97,9 @@ The client will use this IP (in its -H option) as the server destination.
 
 ```bash
 # client side
-./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
+./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
 # server side
-./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
+./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
 
 The `-L` parameter is used by server to denote its port for RDMA request and also socket connection.
@@ -81,7 +119,7 @@ Actually, they are interchangeable to each other. For example:
 
 ```bash
 # server
-./bin/ping_pong_cmplt_cnl -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
+./build/ping_pong_cmplt_cnl -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
 # client
-./bin/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
+./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
