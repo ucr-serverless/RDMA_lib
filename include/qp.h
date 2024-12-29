@@ -11,6 +11,11 @@
 
 #include <rdma/rdma_cma.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t max_send_wr);
 
 int init_multiple_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct rdma_param *params);
@@ -30,4 +35,9 @@ int modify_qp_init_to_rts(struct ibv_qp *qp, struct ib_res *local_res, struct ib
 int modify_qp_to_error(struct ibv_qp *qp);
 
 int modify_qp_to_reset(struct ibv_qp *qp);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* QP_H_ */

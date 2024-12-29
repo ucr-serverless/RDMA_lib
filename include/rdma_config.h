@@ -5,6 +5,11 @@
 #include <stdlib.h>
 
 #define RETRY_MAX 10
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct rdma_param
 {
     uint32_t device_idx;
@@ -28,4 +33,9 @@ enum rdma_status
     RDMA_SUCCESS = 0,
     RDMA_FAILURE = 1,
 };
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* RDMA_CONFIG_H_*/
