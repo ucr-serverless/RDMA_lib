@@ -37,13 +37,13 @@ int main(int argc, char *argv[])
     int ch = 0;
     bool is_server = true;
     char *server_name = NULL;
-    char *local_ip = NULL;
+    char *local_ip = "0.0.0.0";
     char *usage = "";
     int ib_port = 0;
     int device_idx = 0;
     int sgid_idx = 0;
 
-    char *port = NULL;
+    char *port = "1000";
     while ((ch = getopt_long(argc, argv, "H:p:L:hi:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)

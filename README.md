@@ -96,11 +96,13 @@ The client will use this IP (in its -H option) as the server destination.
 ![](./figures/gid_instruction.png)
 
 ```bash
-# client side
-./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
 # server side
+./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -L 10.10.1.1
+# client side
 ./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
+
+**if you want to listen to all ips, use `-L 0.0.0.0`**
 
 The `-L` parameter is used by server to denote its port for RDMA request and also socket connection.
 In our example it will be `10.10.1.1`

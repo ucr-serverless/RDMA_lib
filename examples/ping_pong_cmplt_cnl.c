@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     int device_idx = 0;
     int sgid_idx = 0;
 
-    char *port = NULL;
+    char *port = "10000";
     while ((ch = getopt_long(argc, argv, "H:L:p:h:i:d:x:", long_options, &option_index)) != -1)
     {
         switch (ch)
