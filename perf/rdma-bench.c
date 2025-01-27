@@ -25,17 +25,6 @@ int main(int argc, char *argv[])
 {
     int ret = 0;
     init_config_info(&config_info);
-#ifdef USE_RTE_MEMPOOL
-    ret = rte_eal_init(argc, argv);
-    if (unlikely(ret == -1))
-    {
-        fprintf(stderr, "rte_eal_init() error: %s\n", rte_strerror(rte_errno));
-        return 1;
-    }
-
-    argc -= ret;
-    argv += ret;
-#endif
 
     static struct option long_options[] = {
         {"server_ip", required_argument, NULL, 'H'},    {"dev_index", required_argument, NULL, 'd'},
