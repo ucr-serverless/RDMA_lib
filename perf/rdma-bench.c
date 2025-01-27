@@ -38,11 +38,11 @@ int main(int argc, char *argv[])
 #endif
 
     static struct option long_options[] = {
-        {"server_ip", required_argument, NULL, 1},    {"dev_index", required_argument, NULL, 2},
-        {"sgid_index", required_argument, NULL, 3},   {"ib_port", required_argument, NULL, 4},
-        {"sock_port", required_argument, NULL, 5},    {"benchmark_type", required_argument, NULL, 6},
-        {"msg_size", required_argument, NULL, 7},     {"num_concurr_msgs", required_argument, NULL, 8},
-        {"warm_up_iter", required_argument, NULL, 9}, {"total_iter", required_argument, NULL, 10},
+        {"server_ip", required_argument, NULL, 'H'},    {"dev_index", required_argument, NULL, 'd'},
+        {"sgid_index", required_argument, NULL, 'x'},   {"ib_port", required_argument, NULL, 'i'},
+        {"sock_port", required_argument, NULL, 'p'},    {"benchmark_type", required_argument, NULL, 't'},
+        {"msg_size", required_argument, NULL, 's'},     {"num_concurr_msgs", required_argument, NULL, 'c'},
+        {"warm_up_iter", required_argument, NULL, 9}, {"total_iter", required_argument, NULL, 'n'},
         {"signal_freq", required_argument, NULL, 11}};
 
     int ch = 0;
@@ -50,35 +50,35 @@ int main(int argc, char *argv[])
     {
         switch (ch)
         {
-        case 1:
+        case 'H':
             config_info.is_server = false;
             config_info.server_ip = strdup(optarg);
             break;
-        case 2:
+        case 'd':
             config_info.dev_index = atoi(optarg);
             break;
-        case 3:
+        case 'x':
             config_info.sgid_index = atoi(optarg);
             break;
-        case 4:
+        case 'i':
             config_info.ib_port = atoi(optarg);
             break;
-        case 5:
+        case 'p':
             config_info.sock_port = strdup(optarg);
             break;
-        case 6:
+        case 't':
             config_info.benchmark_type = atoi(optarg);
             break;
-        case 7:
+        case 's':
             config_info.msg_size = atoi(optarg);
             break;
-        case 8:
+        case 'c':
             config_info.num_concurr_msgs = atoi(optarg);
             break;
         case 9:
             config_info.warm_up_iter = atoi(optarg);
             break;
-        case 10:
+        case 'n':
             config_info.total_iter = atoi(optarg);
             break;
         case 11:
