@@ -16,7 +16,6 @@ root_dir = meson.project_source_root()
 cflags = []
 if libdpdk_dep.found()
   #cflags += libdpdk_dep.get_compile_args()
-  cflags += '-DUSE_RTE_MEMPOOL'
   #ldflags = libdpdk_dep.get_link_args()
 endif
 
