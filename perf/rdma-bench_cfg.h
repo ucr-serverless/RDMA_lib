@@ -28,11 +28,11 @@ enum MsgType
 enum BenchMarkType
 {
     SEND_SIGNALED = 1,
-    SEND_UNSIGNALED,
-    WRITE_SIGNALED,
-    WRITE_UNSIGNALED,
-    WRITE_IMM_SIGNALED,
-    WRITE_IMM_UNSIGNALED,
+    SEND_UNSIGNALED = 2,
+    WRITE_SIGNALED = 3,
+    WRITE_UNSIGNALED = 4,
+    WRITE_IMM_SIGNALED = 5,
+    WRITE_IMM_UNSIGNALED = 6,
 
 };
 struct ConfigInfo
@@ -68,6 +68,7 @@ struct ConfigInfo
     int signal_freq;
 
     char *sock_port; /* socket port number */
+    int copy_mode;
 
     struct rte_mempool *mempool;
     void *rte_mr; // TODO: save a list of registered MRs in rte_mempool

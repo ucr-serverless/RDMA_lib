@@ -14,6 +14,7 @@
 #include "sock.h"
 #include "utils.h"
 
+#define NS_PER_SEC 1E9  /* Nano-seconds per second */
 struct args
 {
     struct IBRes *ib_res;
@@ -181,6 +182,17 @@ error:
     pthread_exit((void *)-1);
 }
 
+double calculate_timediff_nsec(struct timespec *end, struct timespec *start)
+{
+    long diff;
+
+    diff = (end->tv_sec - start->tv_sec) * NS_PER_SEC;
+    diff += end->tv_nsec;
+    diff -= start->tv_nsec;
+
+    return (double)diff;
+}
+
 void *client_thread_write_unsignaled(void *arg)
 {
     struct args *args = (struct args *)arg;
@@ -189,6 +201,8 @@ void *client_thread_write_unsignaled(void *arg)
     int ret = 0;
     int msg_size = config_info.msg_size;
     /* int num_concurr_msgs = config_info.num_concurr_msgs; */
+    struct timespec start;
+    struct timespec end;
 
     struct ibv_qp **qp = ib_res->qp;
     struct ibv_cq *cq = ib_res->cq;
@@ -209,11 +223,14 @@ void *client_thread_write_unsignaled(void *arg)
     uint32_t rsize = ib_res->rsize;
     int roffset = 0;
 
-    struct timeval start, end;
     double duration = 0.0;
     double latency = 0.0;
-    double throughput = 0.0;
+    double rps = 0.0;
 
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0)
+    {
+        log_error("get time error");
+    }
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
     check(wc != NULL, "thread: failed to allocate wc.");
 
@@ -233,7 +250,7 @@ void *client_thread_write_unsignaled(void *arg)
 
     buf_offset = 0;
     roffset = 0;
-    long int warm_up_iter = config_info.warm_up_iter;
+
     long int total_iter = config_info.total_iter;
     int signal_freq = config_info.signal_freq;
     long int opt_count = 0;
@@ -268,24 +285,25 @@ void *client_thread_write_unsignaled(void *arg)
             }
         }
         opt_count++;
-        if (opt_count == warm_up_iter)
-        {
-            gettimeofday(&start, NULL);
-        }
-        if (opt_count == total_iter)
-        {
-            gettimeofday(&end, NULL);
+        if (opt_count == config_info.total_iter) {
+            if (clock_gettime(CLOCK_MONOTONIC_RAW, &end) != 0)
+            {
+                log_error("get time error");
+            }
             break;
+
         }
     }
 
-    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / 1000000);
-    latency = duration * 1000000 / (double)(total_iter - warm_up_iter);
+    duration = calculate_timediff_nsec(&end, &start);
+    latency = duration / total_iter / 1E3;
 
-    throughput = (double)(total_iter - warm_up_iter) * (signal_freq + 1) * msg_size / duration;
-    printf("latency: %f for %d unsignaled operations plus a signaled operation\n", latency, signal_freq);
+    rps = (double)(total_iter) / duration * 1E9;
 
-    printf("throughput (Bytes/s): %f\n", throughput);
+    printf("round trip latency per request: %f usec\n", latency);
+
+    printf("rps : %f\n", rps);
+
     ret = post_send_signaled(qp[0], ib_res->ib_buf, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
     bool finish = false;
     while (!finish)

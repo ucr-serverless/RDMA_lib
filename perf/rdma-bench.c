@@ -42,11 +42,14 @@ int main(int argc, char *argv[])
         {"sgid_index", required_argument, NULL, 'x'},   {"ib_port", required_argument, NULL, 'i'},
         {"sock_port", required_argument, NULL, 'p'},    {"benchmark_type", required_argument, NULL, 't'},
         {"msg_size", required_argument, NULL, 's'},     {"num_concurr_msgs", required_argument, NULL, 'c'},
-        {"warm_up_iter", required_argument, NULL, 9}, {"total_iter", required_argument, NULL, 'n'},
-        {"signal_freq", required_argument, NULL, 11}};
+        {"warm_up_iter", required_argument, NULL, 'w'}, {"total_iter", required_argument, NULL, 'n'},
+        {"signal_freq", required_argument, NULL, 'f'},
+        {"copy_mode", required_argument, NULL, 'y'},
+                                           {0, 0, 0, 0}};
 
     int ch = 0;
-    while ((ch = getopt_long(argc, argv, "", long_options, NULL)) != -1)
+    config_info.copy_mode = 0;
+    while ((ch = getopt_long(argc, argv, "H:d:x:i:p:t:s:c:w:n:f:y", long_options, NULL)) != -1)
     {
         switch (ch)
         {
@@ -56,6 +59,9 @@ int main(int argc, char *argv[])
             break;
         case 'd':
             config_info.dev_index = atoi(optarg);
+            break;
+        case 'y':
+            config_info.copy_mode = 1;
             break;
         case 'x':
             config_info.sgid_index = atoi(optarg);

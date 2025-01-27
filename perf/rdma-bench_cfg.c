@@ -36,6 +36,7 @@ void print_benchmark_cfg(struct ConfigInfo *config)
         }
     }
 
+    printf("copy_mode: %d\n", config->copy_mode);
     printf("sock port: %s\n", config->sock_port);
     printf("current_node_idx: %d\n", config->current_node_idx);
     printf("benchmark_type: %d\n", config->benchmark_type);

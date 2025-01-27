@@ -123,3 +123,17 @@ Actually, they are interchangeable to each other. For example:
 # client
 ./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
+
+### rdma-bench
+
+```bash
+# client
+./build/rdma-bench -d 1 -x 1 -i 1 -p 8090 -t 4 -s 10 -c 1 -n 1000000
+```
+
+```bash
+# server
+./build/rdma-bench -d 1 -x 1 -i 1 -p 8090 -t 4 -s 10 -c 1 -n 1000000 -H 10.10.1.2
+```
+
+the copy mode requires to add `-y` at the client
