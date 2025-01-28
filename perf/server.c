@@ -265,6 +265,9 @@ void *server_thread_write_unsignaled(void *arg)
         }
 
 
+        if (config_info.copy_mode == 1) {
+            memcpy(send_buf_ptr, (void*)send_copy_buf, config_info.msg_size);
+        }
         // log_debug("send buf: %s", send_buf_ptr);
         ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, wr_id++, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
