@@ -143,8 +143,10 @@ void *server_thread_write_unsignaled(void *arg)
 
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+
+    // the send buf is 64 for each one
     char* two_side_send_buf_ptr = ib_res->ib_buf + config_info.msg_size * 2;
-    char* two_side_recv_buf_ptr = ib_res->ib_buf + config_info.msg_size * 3;
+    char* two_side_recv_buf_ptr = ib_res->ib_buf + config_info.msg_size * 2 + 64;
 
     uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
     uint64_t remote_send_buf_ptr = raddr;
@@ -193,14 +195,15 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
             // log_info("!! recv two side");
-            ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+            // emulate the sending of pointer
+            ret = post_srq_recv(srq, two_side_recv_buf_ptr, 64, lkey, wr_id++);
             if (unlikely(ret != 0))
             {
                 log_error("post shared receive request fail");
                 goto error;
             }
 
-            ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+            ret = post_send_signaled(*qp, two_side_send_buf_ptr, 64, lkey, wr_id++, 0);
             if (unlikely(ret != 0))
             {
                 log_error("post two side send fail");
@@ -228,7 +231,7 @@ void *server_thread_write_unsignaled(void *arg)
         memset((void*)recv_buf_ptr, 0, config_info.msg_size);
 
         if (config_info.copy_mode == 0) {
-            ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+            ret = post_send_signaled(*qp, two_side_send_buf_ptr, 64, lkey, wr_id++, 0);
             if (unlikely(ret != 0))
             {
                 log_error("post two side send fail");
@@ -253,7 +256,7 @@ void *server_thread_write_unsignaled(void *arg)
                 log_error("failed to poll cq");
                 goto error;
             }
-            ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+            ret = post_srq_recv(srq, two_side_recv_buf_ptr, 64, lkey, wr_id++);
             if (unlikely(ret != 0))
             {
                 log_error("post shared receive request fail");

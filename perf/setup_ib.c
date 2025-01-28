@@ -1,3 +1,4 @@
+#include "rdma-bench_cfg.h"
 #include <arpa/inet.h>
 #ifdef USE_RTE_MEMPOOL
 #include <rte_branch_prediction.h>
@@ -193,7 +194,13 @@ int setup_ib(struct IBRes *ib_res)
     /* the recv buffer occupies the first half while the sending buffer */
     /* occupies the second half */
     /* assume all msgs are of the same content */
-    ib_res->ib_buf_size = config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps;
+    // TODO: change the allocation
+    if (config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps < 2048) {
+        ib_res->ib_buf = 2048;
+    } else {
+        ib_res->ib_buf_size = config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps;
+
+    }
 #ifdef USE_RTE_MEMPOOL
     ib_res->ib_buf = (char *)rte_shm_mgr(ib_res->ib_buf_size);
 #else
