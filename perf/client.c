@@ -231,8 +231,12 @@ void *client_thread_write_unsignaled(void *arg)
     uint64_t recv_msg_buffer;
     long int total_iter = config_info.total_iter;
 
+    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+
+    char* two_side_send_buf_ptr = ib_res->ib_buf + config_info.msg_size * 2;
+    char* two_side_recv_buf_ptr = ib_res->ib_buf + config_info.msg_size * 3;
 
     uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
     uint64_t remote_send_buf_ptr = raddr;
@@ -258,7 +262,6 @@ void *client_thread_write_unsignaled(void *arg)
 
     print_benchmark_cfg(&config_info);
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 2);
 
     assert(rsize == ib_res->ib_buf_size);
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
@@ -272,20 +275,55 @@ void *client_thread_write_unsignaled(void *arg)
     log_info("send buf: %s", send_buf_ptr);
     log_info("recv buf: %s", recv_buf_ptr);
 
+    int wr_id = 0;
+
+    ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+    if (unlikely(ret != 0))
+    {
+        log_error("post shared receive request fail");
+        goto error;
+    }
 
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {
-            ret = sock_write(config_info.peer_sockfds[0], &send_msg_buffer, sizeof(uint64_t));
-            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
-            ret = sock_read(config_info.peer_sockfds[0], &recv_msg_buffer, sizeof(uint64_t));
-            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
+            ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+            if (unlikely(ret != 0))
+            {
+                log_error("post two side send fail");
+                goto error;
+            }
+            do
+            {
+                num_completion = ibv_poll_cq(cq, 1, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
+            }
+
+            do
+            {
+                num_completion = ibv_poll_cq(cq, 1, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
+            }
+            ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+            if (unlikely(ret != 0))
+            {
+                log_error("post shared receive request fail");
+                goto error;
+            }
         } else {
             memcpy(send_buf_ptr, send_copy_buf, config_info.msg_size);
         }
 
 
         // log_debug("send: %s", send_buf_ptr);
-        ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, opt_count, remote_recv_buf_ptr, rkey);
+        ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, wr_id++, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
             log_error("post write failed");
 
@@ -313,10 +351,37 @@ void *client_thread_write_unsignaled(void *arg)
         // log_debug("get notification");
 
         if (config_info.copy_mode == 0) {
-            ret = sock_read(config_info.peer_sockfds[0], &recv_msg_buffer, sizeof(uint64_t));
-            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
-            ret = sock_write(config_info.peer_sockfds[0], &send_msg_buffer, sizeof(uint64_t));
-            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
+            do
+            {
+                num_completion = ibv_poll_cq(cq, 1, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
+            }
+            ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+            if (unlikely(ret != 0))
+            {
+                log_error("post shared receive request fail");
+                goto error;
+            }
+
+            ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+            if (unlikely(ret != 0))
+            {
+                log_error("post two side send fail");
+                goto error;
+            }
+            do
+            {
+                num_completion = ibv_poll_cq(cq, 1, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
+            }
         }
         // log_info("waiting");
         while (*recv_buf_ptr != monitor) {
