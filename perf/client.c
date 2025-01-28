@@ -284,6 +284,7 @@ void *client_thread_write_unsignaled(void *arg)
             log_error("post write failed");
 
         }
+
         do
         {
             num_completion = ibv_poll_cq(cq, NUM_WC, wc);
@@ -301,6 +302,7 @@ void *client_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
+        log_debug("get notification");
 
         if (config_info.copy_mode == 0) {
             sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));

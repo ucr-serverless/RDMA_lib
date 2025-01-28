@@ -194,6 +194,7 @@ void *server_thread_write_unsignaled(void *arg)
         }
 
 
+        log_debug("send buf: %s", send_buf_ptr);
         ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, opt_count, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
             log_error("post write failed");
@@ -216,6 +217,7 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
+        log_debug("get notification");
         // ensure the wr_id is unique
         opt_count++;
 
