@@ -622,22 +622,22 @@ void *server_thread_send_signaled(void *arg)
             goto error;
         }
 
-        // ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
-        // if (unlikely(ret != 0))
-        // {
-        //     log_error("post two side send fail");
-        //     goto error;
-        // }
-        // do
-        // {
-        //     num_completion = ibv_poll_cq(cq, 1, wc);
-        // } while (num_completion == 0);
-        // if (unlikely(num_completion < 0))
-        // {
-        //     log_error("failed to poll cq");
-        //     goto error;
-        // }
-        // opt_count++;
+        ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+        if (unlikely(ret != 0))
+        {
+            log_error("post two side send fail");
+            goto error;
+        }
+        do
+        {
+            num_completion = ibv_poll_cq(cq, 1, wc);
+        } while (num_completion == 0);
+        if (unlikely(num_completion < 0))
+        {
+            log_error("failed to poll cq");
+            goto error;
+        }
+        opt_count++;
 
 
     }
