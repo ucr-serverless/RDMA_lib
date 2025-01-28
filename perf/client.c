@@ -1,3 +1,7 @@
+#include "rdma-bench_cfg.h"
+#include <stdint.h>
+#include <string.h>
+#include <sys/socket.h>
 #define _GNU_SOURCE
 #include <libconfig.h>
 #include <stdbool.h>
@@ -211,6 +215,7 @@ void *client_thread_write_unsignaled(void *arg)
     uint32_t lkey = ib_res->mr->lkey;
 
     char *buf_ptr = ib_res->ib_buf;
+    // the ib_buf is 2 * msg_sz;
     char *buf_base = ib_res->ib_buf;
     int buf_offset = 0;
     size_t buf_size = ib_res->ib_buf_size;
@@ -227,46 +232,54 @@ void *client_thread_write_unsignaled(void *arg)
     double latency = 0.0;
     double rps = 0.0;
 
+    long int opt_count = 0;
+    char monitor = '1';
+    uint64_t send_msg_buffer;
+    uint64_t recv_msg_buffer;
+    long int total_iter = config_info.total_iter;
+    int signal_freq = config_info.signal_freq;
+    char* send_buf_ptr = ib_res->ib_buf;
+    char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+
+
+    char *copy_buf = (char*)malloc(config_info.msg_size);
+    memset(copy_buf, 0, config_info.msg_size);
+    copy_buf[0] = monitor;
+
+    log_info("msg_sz: %d", config_info.msg_size);
+    log_info("buffersz: %d", ib_res->ib_buf_size);
+    memset(recv_buf_ptr, 0, config_info.msg_size);
+    memset(send_buf_ptr, 0, config_info.msg_size);
+    send_buf_ptr[0] = monitor;
+
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+
+
+    print_benchmark_cfg(&config_info);
+
+    wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
+    check(wc != NULL, "thread: failed to allocate wc.");
+    log_info("thread: ready to send");
+
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0)
     {
         log_error("get time error");
     }
-    wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
-    check(wc != NULL, "thread: failed to allocate wc.");
-
-    for (int j = 0; j < 40; j++)
-    {
-        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
-        if (unlikely(ret != 0))
-        {
-            log_error("post shared receive request fail");
-            goto error;
-        }
-        buf_offset = (buf_offset + msg_size) % buf_size;
-        buf_ptr = buf_base + buf_offset;
-    }
-
-    log_debug("thread: ready to send");
-
-    buf_offset = 0;
-    roffset = 0;
-
-    long int total_iter = config_info.total_iter;
-    int signal_freq = config_info.signal_freq;
-    long int opt_count = 0;
-    while (true)
-    {
-        for (int i = 0; i < signal_freq; i++)
-        {
-            ret = post_write_unsignaled(*qp, buf_ptr, msg_size, lkey, 1, rptr, rkey);
-            roffset = (roffset + msg_size) % rsize;
-            rptr = raddr + roffset;
+    while(opt_count < config_info.total_iter) {
+        if (config_info.copy_mode == 0) {
+            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
+            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
+        } else {
+            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
         }
 
-        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, 1, rptr, rkey);
-        roffset = (roffset + msg_size) % rsize;
-        rptr = raddr + roffset;
 
+        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, opt_count, rptr, rkey);
+        if (ret != RDMA_SUCCESS) {
+            log_error("post write failed");
+
+        }
         do
         {
             num_completion = ibv_poll_cq(cq, NUM_WC, wc);
@@ -284,16 +297,40 @@ void *client_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        opt_count++;
-        if (opt_count == config_info.total_iter) {
-            if (clock_gettime(CLOCK_MONOTONIC_RAW, &end) != 0)
-            {
-                log_error("get time error");
-            }
-            break;
 
+        if (config_info.copy_mode == 0) {
+            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
+            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
+        } else {
+            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
         }
+
+        while (*recv_buf_ptr != monitor) {
+        }
+        // reset the buf 
+        memset(recv_buf_ptr, 0, config_info.msg_size);
+        opt_count++;
+
     }
+
+
+
+    // for (int j = 0; j < 40; j++)
+    // {
+    //     ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
+    //     if (unlikely(ret != 0))
+    //     {
+    //         log_error("post shared receive request fail");
+    //         goto error;
+    //     }
+    //     buf_offset = (buf_offset + msg_size) % buf_size;
+    //     buf_ptr = buf_base + buf_offset;
+    // }
+    //
+    //
+    // buf_offset = 0;
+    // roffset = 0;
+
 
     duration = calculate_timediff_nsec(&end, &start);
     latency = duration / total_iter / 1E3;
@@ -304,30 +341,8 @@ void *client_thread_write_unsignaled(void *arg)
 
     printf("rps : %f\n", rps);
 
-    ret = post_send_signaled(qp[0], ib_res->ib_buf, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
-    bool finish = false;
-    while (!finish)
-    {
-        num_completion = ibv_poll_cq(cq, NUM_WC, wc);
-        if (unlikely(num_completion < 0))
-        {
-            log_error("failed to poll cq");
-            goto error;
-        }
-        for (int i = 0; i < num_completion; i++)
-        {
-            if (wc[i].status != IBV_WC_SUCCESS)
-            {
-                log_error("wc failed status: %s.", ibv_wc_status_str(wc[i].status));
-                goto error;
-            }
-            if (wc[i].opcode == IBV_WC_SEND)
-            {
-                finish = true;
-            }
-        }
-    }
     free(wc);
+    free(copy_buf);
     pthread_exit((void *)0);
 
 error:

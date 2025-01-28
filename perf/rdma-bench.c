@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
 
     int ch = 0;
     config_info.copy_mode = 0;
+    config_info.num_concurr_msgs = 2;
     while ((ch = getopt_long(argc, argv, "H:d:x:i:p:t:s:c:w:n:f:y", long_options, NULL)) != -1)
     {
         switch (ch)

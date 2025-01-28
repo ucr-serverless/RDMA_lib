@@ -109,38 +109,87 @@ void *server_thread_write_unsignaled(void *arg)
     int ret = 0;
     int msg_size = config_info.msg_size;
     int num_concurr_msgs = config_info.num_concurr_msgs;
+    log_info("num_concurr_msgs", num_concurr_msgs);
 
+    struct ibv_qp **qp = ib_res->qp;
     struct ibv_cq *cq = ib_res->cq;
     struct ibv_srq *srq = ib_res->srq;
     struct ibv_wc *wc = NULL;
     uint32_t lkey = ib_res->mr->lkey;
+    uint32_t rkey = ib_res->rkey;
+    uint64_t raddr = ib_res->raddr;
+    uint64_t rptr = raddr;
+    uint32_t rsize = ib_res->rsize;
 
+    struct timespec start;
+    struct timespec end;
     char *buf_ptr = ib_res->ib_buf;
     char *buf_base = ib_res->ib_buf;
     int buf_offset = 0;
     size_t buf_size = ib_res->ib_buf_size;
-
-    int num_completion = 0;
-
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
-    check(wc != NULL, "thread: failed to allocate wc.");
 
-    for (int j = 0; j < num_concurr_msgs; j++)
-    {
-        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
-        if (unlikely(ret != 0))
-        {
-            log_error("post shared receive request fail");
-            goto error;
+    print_benchmark_cfg(&config_info);
+    char monitor = '1';
+    uint64_t msg_buffer;
+    int num_completion = 0;
+    uint64_t send_msg_buffer;
+    uint64_t recv_msg_buffer;
+    long int total_iter = config_info.total_iter;
+    int signal_freq = config_info.signal_freq;
+
+
+    assert(raddr == (uint64_t)ib_res->ib_buf);
+    char* send_buf_ptr = ib_res->ib_buf;
+    char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+
+
+    char *copy_buf = (char*)malloc(config_info.msg_size);
+    memset(copy_buf, 0, config_info.msg_size);
+    copy_buf[0] = monitor;
+
+    log_info("msg_sz: %d", config_info.msg_size);
+    log_info("buffersz: %d", ib_res->ib_buf_size);
+    memset(recv_buf_ptr, 0, config_info.msg_size);
+    memset(send_buf_ptr, 0, config_info.msg_size);
+    send_buf_ptr[0] = monitor;
+
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+
+    int opt_count = 0;
+    print_benchmark_cfg(&config_info);
+
+    while(true) {
+        if (config_info.copy_mode == 0) {
+            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
+            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
+        } else {
+            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
         }
-        buf_offset = (buf_offset + msg_size) % buf_size;
-        buf_ptr = buf_base + buf_offset;
-    }
 
-    bool finish = false;
-    while (!finish)
-    {
-        num_completion = ibv_poll_cq(cq, NUM_WC, wc);
+        while (*recv_buf_ptr != monitor) {
+        }
+        // reset the buf 
+        memset(recv_buf_ptr, 0, config_info.msg_size);
+
+        if (config_info.copy_mode == 0) {
+            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
+            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
+        } else {
+            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
+        }
+
+
+        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, opt_count, rptr, rkey);
+        if (ret != RDMA_SUCCESS) {
+            log_error("post write failed");
+
+        }
+        do
+        {
+            num_completion = ibv_poll_cq(cq, NUM_WC, wc);
+        } while (num_completion == 0);
         if (unlikely(num_completion < 0))
         {
             log_error("failed to poll cq");
@@ -148,23 +197,22 @@ void *server_thread_write_unsignaled(void *arg)
         }
         for (int i = 0; i < num_completion; i++)
         {
-            if (wc[i].status != IBV_WC_SUCCESS)
+            if (unlikely(wc[i].status != IBV_WC_SUCCESS))
             {
                 log_error("wc failed status: %s.", ibv_wc_status_str(wc[i].status));
                 goto error;
             }
-            if (wc[i].opcode == IBV_WC_RECV)
-            {
-                /* post a receive */
-                post_srq_recv(srq, buf_base, msg_size, lkey, wc[i].wr_id);
-                if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_STOP))
-                {
-                    finish = true;
-                }
-            }
         }
+        // ensure the wr_id is unique
+        opt_count++;
+
+
     }
+
+
+
     free(wc);
+    free(copy_buf);
     pthread_exit((void *)0);
 error:
     free(wc);
