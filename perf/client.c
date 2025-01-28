@@ -734,9 +734,12 @@ void *client_thread_send_signaled(void *arg)
 {
     struct args *args = (struct args *)arg;
     struct IBRes *ib_res = args->ib_res;
-    int ret = 0, n = 0;
+    assert(ib_res->num_qps == 1);
+    int ret = 0;
     int msg_size = config_info.msg_size;
-    int num_concurr_msgs = config_info.num_concurr_msgs;
+    /* int num_concurr_msgs = config_info.num_concurr_msgs; */
+    struct timespec start;
+    struct timespec end;
 
     struct ibv_qp **qp = ib_res->qp;
     struct ibv_cq *cq = ib_res->cq;
@@ -744,144 +747,152 @@ void *client_thread_send_signaled(void *arg)
     struct ibv_wc *wc = NULL;
     uint32_t lkey = ib_res->mr->lkey;
 
-    char *buf_ptr = ib_res->ib_buf;
-    char *buf_base = ib_res->ib_buf;
-    int buf_offset = 0;
-    size_t buf_size = ib_res->ib_buf_size;
+    int num_completion = 0;
 
-    bool start_sending = false;
-    struct timeval start, end;
-    long ops_count = 0;
+    // remote key and address
+    uint32_t rkey = ib_res->rkey;
+    uint64_t raddr = ib_res->raddr;
+    uint32_t rsize = ib_res->rsize;
+
     double duration = 0.0;
-    double throughput = 0.0;
     double latency = 0.0;
+    double rps = 0.0;
 
-    /* pre-post recvs */
+    long int opt_count = 0;
+    char monitor = '1';
+    uint64_t send_msg_buffer;
+    uint64_t recv_msg_buffer;
+    long int total_iter = config_info.total_iter;
+
+    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+    char* send_buf_ptr = ib_res->ib_buf;
+    volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+
+    char* two_side_send_buf_ptr = ib_res->ib_buf + config_info.msg_size * 2;
+    char* two_side_recv_buf_ptr = ib_res->ib_buf + config_info.msg_size * 3;
+
+    uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
+    uint64_t remote_send_buf_ptr = raddr;
+
+    char *send_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(send_copy_buf, 0, config_info.msg_size);
+    send_copy_buf[0] = monitor;
+    char *recv_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(recv_copy_buf, 0, config_info.msg_size);
+    recv_copy_buf[0] = monitor;
+
+    log_info("msg_sz: %d", config_info.msg_size);
+    log_info("buffersz: %d", ib_res->ib_buf_size);
+
+    memset((void*)recv_buf_ptr, 0, config_info.msg_size);
+    memset(send_buf_ptr, 0, config_info.msg_size);
+    send_buf_ptr[0] = monitor;
+
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+
+    log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
+
+    print_benchmark_cfg(&config_info);
+
+
+    assert(rsize == ib_res->ib_buf_size);
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
     check(wc != NULL, "thread: failed to allocate wc.");
+    log_info("thread: ready to send");
 
-    for (int j = 0; j < num_concurr_msgs; j++)
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+
+    int wr_id = 0;
+
+    ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+    if (unlikely(ret != 0))
     {
-        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
-        if (unlikely(ret != 0))
-        {
-            log_error("post shared receive request fail");
-            goto error;
-        }
-        buf_offset = (buf_offset + msg_size) % buf_size;
-        buf_ptr = buf_base + buf_offset;
+        log_error("post shared receive request fail");
+        goto error;
     }
 
-    printf("Client thread wait for start signal...\n");
-    /* wait for start signal */
-    while (start_sending != true)
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0)
     {
-        do
-        {
-            n = ibv_poll_cq(cq, NUM_WC, wc);
-        } while (n < 1);
-        check(n > 0, "thread: failed to poll cq");
-
-        for (int i = 0; i < n; i++)
-        {
-            if (wc[i].status != IBV_WC_SUCCESS)
+        log_error("get time error");
+    }
+    while(opt_count < config_info.total_iter) {
+            // log_info("!! post two side");
+            ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+            if (unlikely(ret != 0))
             {
-                check(0, "thread: wc failed status: %s.", ibv_wc_status_str(wc[i].status));
+                log_error("post two side send fail");
+                goto error;
             }
-            if (wc[i].opcode == IBV_WC_RECV)
+            do
             {
-                /* post a receive */
-                post_srq_recv(srq, buf_ptr, msg_size, lkey, wc[i].wr_id);
-
-                if (ntohl(wc[i].imm_data) == MSG_CTL_START)
-                {
-                    log_debug("received start signal");
-                    start_sending = true;
-                    break;
-                }
+                num_completion = ibv_poll_cq(cq, 2, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
             }
-        }
+
+            do
+            {
+                num_completion = ibv_poll_cq(cq, 1, wc);
+            } while (num_completion == 0);
+            if (unlikely(num_completion < 0))
+            {
+                log_error("failed to poll cq");
+                goto error;
+            }
+            ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+            if (unlikely(ret != 0))
+            {
+                log_error("post shared receive request fail");
+                goto error;
+            }
+
+        opt_count++;
+
     }
 
-    log_debug("thread: ready to send");
-
-    /* pre-post sends */
-    buf_offset = 0;
-    log_debug("buf_ptr = %" PRIx64 "", (uint64_t)buf_ptr);
-
-    bool stop = false;
-    while (!stop)
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &end) != 0)
     {
-        ret = post_send_signaled(*qp, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr, 1);
-        /* poll cq */
-        do
-        {
-            n = ibv_poll_cq(cq, NUM_WC, wc);
-        } while (n == 0);
-        if (n < 0)
-        {
-            check(0, "thread: Failed to poll cq");
-        }
-
-        for (int i = 0; i < n; i++)
-        {
-            if (wc[i].status != IBV_WC_SUCCESS)
-            {
-                if (wc[i].opcode == IBV_WC_SEND)
-                {
-                    check(0, "thread: send failed status: %s; wr_id = %" PRIx64 "", ibv_wc_status_str(wc[i].status),
-                          wc[i].wr_id);
-                }
-                else
-                {
-                    check(0, "thread: recv failed status: %s; wr_id = %" PRIx64 "", ibv_wc_status_str(wc[i].status),
-                          wc[i].wr_id);
-                }
-            }
-
-            if (wc[i].opcode == IBV_WC_SEND)
-            {
-                ops_count += 1;
-
-                if (ops_count == config_info.warm_up_iter)
-                {
-                    gettimeofday(&start, NULL);
-                }
-
-                if (ops_count == config_info.total_iter)
-                {
-                    gettimeofday(&end, NULL);
-                    ret = post_send_signaled(qp[0], buf_ptr, 0, lkey, IB_WR_ID_STOP, MSG_CTL_STOP);
-                }
-                if (wc[i].wr_id == IB_WR_ID_STOP)
-                {
-                    stop = true;
-                    break;
-                }
-
-                /* post a new receive */
-            }
-            /* ret = post_srq_recv(msg_size, lkey, wc[i].wr_id, srq, buf_ptr); */
-        } /* loop through all wc */
+        log_error("get time error");
     }
 
-    /* dump statistics */
-    duration = (double)((end.tv_sec - start.tv_sec) + (double)(end.tv_usec - start.tv_usec) / 1000000);
-    throughput = (double)(config_info.total_iter - config_info.warm_up_iter) / duration;
-    latency = duration * 1000000 / (double)(config_info.total_iter - config_info.warm_up_iter);
 
-    log_info("thread: throughput = %f (ops/s)", throughput);
-    printf("thread: throughput = %f (ops/s) %f (Bytes/s)\n", throughput, throughput * msg_size);
-    printf("latency: %f usec", latency);
+    // for (int j = 0; j < 40; j++)
+    // {
+    //     ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
+    //     if (unlikely(ret != 0))
+    //     {
+    //         log_error("post shared receive request fail");
+    //         goto error;
+    //     }
+    //     buf_offset = (buf_offset + msg_size) % buf_size;
+    //     buf_ptr = buf_base + buf_offset;
+    // }
+    //
+    //
+    // buf_offset = 0;
+    // roffset = 0;
+
+
+    duration = calculate_timediff_nsec(&end, &start);
+    latency = duration / total_iter / 1E3;
+
+    rps = (double)(total_iter) / duration * 1E9;
+
+    printf("round trip latency per request: %f usec\n", latency);
+
+    printf("rps : %f\n", rps);
 
     free(wc);
+    free(send_copy_buf);
     pthread_exit((void *)0);
 
 error:
-    if (wc != NULL)
-    {
-        free(wc);
-    }
+    free(wc);
     pthread_exit((void *)-1);
 }
 

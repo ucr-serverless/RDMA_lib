@@ -524,89 +524,130 @@ void *server_thread_send_signaled(void *arg)
 {
     struct args *args = (struct args *)arg;
     struct IBRes *ib_res = args->ib_res;
-    int ret = 0, i = 0, j = 0, n = 0;
-    int num_concurr_msgs = config_info.num_concurr_msgs;
+    assert(ib_res->num_qps == 1);
+    int ret = 0;
     int msg_size = config_info.msg_size;
+    int num_concurr_msgs = config_info.num_concurr_msgs;
+
+    log_info("!!!num_concurr_msgs", num_concurr_msgs);
 
     struct ibv_qp **qp = ib_res->qp;
     struct ibv_cq *cq = ib_res->cq;
     struct ibv_srq *srq = ib_res->srq;
     struct ibv_wc *wc = NULL;
     uint32_t lkey = ib_res->mr->lkey;
+    uint32_t rkey = ib_res->rkey;
+    // the remote memory's address
+    uint64_t raddr = ib_res->raddr;
+    // the remote memory
+    uint64_t rptr = raddr;
+    uint32_t rsize = ib_res->rsize;
 
-    char *buf_ptr = ib_res->ib_buf;
-    char *buf_base = ib_res->ib_buf;
-    int buf_offset = 0;
-    size_t buf_size = ib_res->ib_buf_size;
-
-    bool stop = false;
-
+    struct timespec start;
+    struct timespec end;
+    // the local memory
+    //
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
-    check(wc != NULL, "thread: failed to allocate wc.");
 
-    /* pre-post recvs */
-    wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
-    check(wc != NULL, "thread: failed to allocate wc.");
+    char monitor = '1';
+    int num_completion = 0;
+    uint64_t send_msg_buffer;
+    uint64_t recv_msg_buffer;
 
-    for (j = 0; j < num_concurr_msgs; j++)
+    log_info("local addr: %lu, remote addr: %lu", (uint64_t)ib_res->ib_buf, raddr);
+
+    print_benchmark_cfg(&config_info);
+
+    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+
+    char* send_buf_ptr = ib_res->ib_buf;
+    volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+    char* two_side_send_buf_ptr = ib_res->ib_buf + config_info.msg_size * 2;
+    char* two_side_recv_buf_ptr = ib_res->ib_buf + config_info.msg_size * 3;
+
+    uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
+    uint64_t remote_send_buf_ptr = raddr;
+
+    char *send_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(send_copy_buf, 0, config_info.msg_size);
+    send_copy_buf[0] = monitor;
+    char *recv_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(recv_copy_buf, 0, config_info.msg_size);
+    recv_copy_buf[0] = monitor;
+
+    log_info("msg_sz: %d", config_info.msg_size);
+    log_info("buffersz: %d", ib_res->ib_buf_size);
+    memset((void*)recv_buf_ptr, 0, config_info.msg_size);
+    memset(send_buf_ptr, 0, config_info.msg_size);
+    send_buf_ptr[0] = monitor;
+
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+    log_info("send cpy: %s", send_copy_buf);
+    log_info("recv cpy: %s", recv_copy_buf);
+
+    log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
+
+    assert(rsize == ib_res->ib_buf_size);
+    int opt_count = 0;
+    print_benchmark_cfg(&config_info);
+    int wr_id = 0;
+
+    ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+    if (unlikely(ret != 0))
     {
-        ret = post_srq_recv(srq, buf_ptr, msg_size, lkey, (uint64_t)buf_ptr);
-        buf_offset = (buf_offset + msg_size) % buf_size;
-        buf_ptr = buf_base + buf_offset;
+        log_error("post shared receive request fail");
+        goto error;
     }
 
-    /* signal the client to start */
-    printf("signal the client to start...\n");
-
-    ret = post_send_signaled(*qp, buf_base, 0, lkey, 0, MSG_CTL_START);
-    check(ret == 0, "thread: failed to signal the client to start");
-    log_debug("wait for client");
-
-    while (stop != true)
-    {
-        /* poll cq */
-        n = ibv_poll_cq(cq, NUM_WC, wc);
-        if (n < 0)
+    while(true) {
+        do
         {
-            check(0, "thread: Failed to poll cq");
+            num_completion = ibv_poll_cq(cq, 1, wc);
+        } while (num_completion == 0);
+        if (unlikely(num_completion < 0))
+        {
+            log_error("failed to poll cq");
+            goto error;
+        }
+        // log_info("!! recv two side");
+        ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
+        if (unlikely(ret != 0))
+        {
+            log_error("post shared receive request fail");
+            goto error;
         }
 
-        for (i = 0; i < n; i++)
+        ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
+        if (unlikely(ret != 0))
         {
-            if (wc[i].status != IBV_WC_SUCCESS)
-            {
-                if (wc[i].opcode == IBV_WC_SEND)
-                {
-                    check(0, "thread: send failed status: %s", ibv_wc_status_str(wc[i].status));
-                }
-                else
-                {
-                    check(0, "thread: recv failed status: %s", ibv_wc_status_str(wc[i].status));
-                }
-            }
-
-            if (wc[i].opcode == IBV_WC_RECV)
-            {
-                if ((wc[i].wc_flags & IBV_WC_WITH_IMM) && (ntohl(wc[i].imm_data) == MSG_CTL_STOP))
-                {
-                    stop = true;
-                }
-            }
-            post_srq_recv(srq, buf_ptr, msg_size, lkey, wc[i].wr_id);
-            buf_offset = (buf_offset + msg_size) % buf_size;
-            buf_ptr = buf_base + buf_offset;
+            log_error("post two side send fail");
+            goto error;
         }
+        do
+        {
+            num_completion = ibv_poll_cq(cq, 1, wc);
+        } while (num_completion == 0);
+        if (unlikely(num_completion < 0))
+        {
+            log_error("failed to poll cq");
+            goto error;
+        }
+        opt_count++;
+
+
     }
+
+
+
     free(wc);
+    free(send_copy_buf);
     pthread_exit((void *)0);
-
 error:
-    if (wc != NULL)
-    {
-        free(wc);
-    }
+    free(wc);
     pthread_exit((void *)-1);
 }
+
 
 void *server_thread_send_unsignaled(void *arg)
 {
