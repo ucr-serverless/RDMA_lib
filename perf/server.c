@@ -109,7 +109,8 @@ void *server_thread_write_unsignaled(void *arg)
     int ret = 0;
     int msg_size = config_info.msg_size;
     int num_concurr_msgs = config_info.num_concurr_msgs;
-    log_info("num_concurr_msgs", num_concurr_msgs);
+
+    log_info("!!!num_concurr_msgs", num_concurr_msgs);
 
     struct ibv_qp **qp = ib_res->qp;
     struct ibv_cq *cq = ib_res->cq;
@@ -117,36 +118,41 @@ void *server_thread_write_unsignaled(void *arg)
     struct ibv_wc *wc = NULL;
     uint32_t lkey = ib_res->mr->lkey;
     uint32_t rkey = ib_res->rkey;
+    // the remote memory's address
     uint64_t raddr = ib_res->raddr;
+    // the remote memory
     uint64_t rptr = raddr;
     uint32_t rsize = ib_res->rsize;
 
     struct timespec start;
     struct timespec end;
-    char *buf_ptr = ib_res->ib_buf;
-    char *buf_base = ib_res->ib_buf;
-    int buf_offset = 0;
-    size_t buf_size = ib_res->ib_buf_size;
+    // the local memory
+    //
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
 
-    print_benchmark_cfg(&config_info);
     char monitor = '1';
-    uint64_t msg_buffer;
     int num_completion = 0;
     uint64_t send_msg_buffer;
     uint64_t recv_msg_buffer;
-    long int total_iter = config_info.total_iter;
-    int signal_freq = config_info.signal_freq;
 
+    log_info("local addr: %lu, remote addr: %lu", (uint64_t)ib_res->ib_buf, raddr);
 
-    assert(raddr == (uint64_t)ib_res->ib_buf);
+    print_benchmark_cfg(&config_info);
+
+    assert(ib_res->ib_buf_size == config_info.msg_size * 2);
+
     char* send_buf_ptr = ib_res->ib_buf;
     char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
 
+    uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
+    uint64_t remote_send_buf_ptr = raddr;
 
-    char *copy_buf = (char*)malloc(config_info.msg_size);
-    memset(copy_buf, 0, config_info.msg_size);
-    copy_buf[0] = monitor;
+    char *send_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(send_copy_buf, 0, config_info.msg_size);
+    send_copy_buf[0] = monitor;
+    char *recv_copy_buf = (char*)malloc(config_info.msg_size);
+    memset(recv_copy_buf, 0, config_info.msg_size);
+    recv_copy_buf[0] = monitor;
 
     log_info("msg_sz: %d", config_info.msg_size);
     log_info("buffersz: %d", ib_res->ib_buf_size);
@@ -157,6 +163,10 @@ void *server_thread_write_unsignaled(void *arg)
     log_info("send buf: %s", send_buf_ptr);
     log_info("recv buf: %s", recv_buf_ptr);
 
+    log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
+
+    assert(ib_res->ib_buf_size == config_info.msg_size * 2);
+    assert(rsize == ib_res->ib_buf_size);
     int opt_count = 0;
     print_benchmark_cfg(&config_info);
 
@@ -164,12 +174,15 @@ void *server_thread_write_unsignaled(void *arg)
         if (config_info.copy_mode == 0) {
             sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
-        } else {
-            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
-        }
-
+        } 
+        log_debug("waiting");
         while (*recv_buf_ptr != monitor) {
         }
+        log_debug("not waiting");
+        if (config_info.copy_mode == 1) {
+            memcpy(recv_copy_buf, recv_buf_ptr, config_info.msg_size);
+        }
+
         // reset the buf 
         memset(recv_buf_ptr, 0, config_info.msg_size);
 
@@ -177,11 +190,11 @@ void *server_thread_write_unsignaled(void *arg)
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
             sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
         } else {
-            memcpy(send_buf_ptr, copy_buf, config_info.msg_size);
+            memcpy(send_buf_ptr, send_copy_buf, config_info.msg_size);
         }
 
 
-        ret = post_write_signaled(*qp, buf_ptr, msg_size, lkey, opt_count, rptr, rkey);
+        ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, opt_count, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
             log_error("post write failed");
 
@@ -212,7 +225,7 @@ void *server_thread_write_unsignaled(void *arg)
 
 
     free(wc);
-    free(copy_buf);
+    free(send_copy_buf);
     pthread_exit((void *)0);
 error:
     free(wc);
