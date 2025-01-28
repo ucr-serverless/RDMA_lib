@@ -192,7 +192,7 @@ void *server_thread_write_unsignaled(void *arg)
                 log_error("failed to poll cq");
                 goto error;
             }
-            log_info("!! recv two side");
+            // log_info("!! recv two side");
             ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
             if (unlikely(ret != 0))
             {
@@ -216,10 +216,10 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         } 
-        log_debug("waiting");
+        // log_debug("waiting");
         while (*recv_buf_ptr != monitor) {
         }
-        log_debug("not waiting");
+        // log_debug("not waiting");
         if (config_info.copy_mode == 1) {
             memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
@@ -288,7 +288,7 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        log_debug("get notification");
+        // log_debug("get notification");
         // ensure the wr_id is unique
         opt_count++;
 
