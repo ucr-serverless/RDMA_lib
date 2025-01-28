@@ -285,11 +285,22 @@ void *client_thread_write_unsignaled(void *arg)
     }
 
     if (config_info.copy_mode == 0) {
-        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
     }
     else {
 
-        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
     }
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {

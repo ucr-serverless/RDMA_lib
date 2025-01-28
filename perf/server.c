@@ -184,11 +184,20 @@ void *server_thread_write_unsignaled(void *arg)
         goto error;
     }
     if (config_info.copy_mode == 0) {
-        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
     }
     else {
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
+        log_info("RDMA ONE SIDE COPY");
 
-        log_info("RDMA ONE SIDE EXTRA MESSAGE");
     }
 
     while(true) {
@@ -614,7 +623,13 @@ void *server_thread_send_signaled(void *arg)
         goto error;
     }
 
-    log_debug("test two side latency");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
     while(true) {
         do
         {
