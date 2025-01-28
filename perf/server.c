@@ -174,8 +174,10 @@ void *server_thread_write_unsignaled(void *arg)
 
     while(true) {
         if (config_info.copy_mode == 0) {
-            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
-            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
+            ret = sock_read(config_info.peer_sockfds[0], &recv_msg_buffer, sizeof(uint64_t));
+            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
+            ret = sock_write(config_info.peer_sockfds[0], &send_msg_buffer, sizeof(uint64_t));
+            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
         } 
         // log_debug("waiting");
         while (*recv_buf_ptr != monitor) {
@@ -189,8 +191,10 @@ void *server_thread_write_unsignaled(void *arg)
         memset((void*)recv_buf_ptr, 0, config_info.msg_size);
 
         if (config_info.copy_mode == 0) {
-            sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
-            sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
+            ret = sock_write(config_info.peer_sockfds[0], &send_msg_buffer, sizeof(uint64_t));
+            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
+            ret = sock_read(config_info.peer_sockfds[0], &recv_msg_buffer, sizeof(uint64_t));
+            check(ret == sizeof(uint64_t), "Failed to receive sync from client");
         } else {
             memcpy(send_buf_ptr, send_copy_buf, config_info.msg_size);
         }
@@ -219,7 +223,7 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        // log_debug("get notification");
+        log_debug("get notification");
         // ensure the wr_id is unique
         opt_count++;
 
