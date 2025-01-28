@@ -169,7 +169,6 @@ void *server_thread_write_unsignaled(void *arg)
 
     log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 2);
     assert(rsize == ib_res->ib_buf_size);
     int opt_count = 0;
     print_benchmark_cfg(&config_info);
@@ -193,6 +192,7 @@ void *server_thread_write_unsignaled(void *arg)
                 log_error("failed to poll cq");
                 goto error;
             }
+            log_info("!! recv two side");
             ret = post_srq_recv(srq, two_side_recv_buf_ptr, msg_size, lkey, wr_id++);
             if (unlikely(ret != 0))
             {
@@ -216,10 +216,10 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         } 
-        // log_debug("waiting");
+        log_debug("waiting");
         while (*recv_buf_ptr != monitor) {
         }
-        // log_debug("not waiting");
+        log_debug("not waiting");
         if (config_info.copy_mode == 1) {
             memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }

@@ -286,6 +286,7 @@ void *client_thread_write_unsignaled(void *arg)
 
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {
+            log_info("!! post two side");
             ret = post_send_signaled(*qp, two_side_send_buf_ptr, msg_size, lkey, wr_id++, 0);
             if (unlikely(ret != 0))
             {
@@ -383,14 +384,14 @@ void *client_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        // log_info("waiting");
+        log_info("waiting");
         while (*recv_buf_ptr != monitor) {
 
         }
         if (config_info.copy_mode == 1) {
             memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
-        // log_info("finished waiting");
+        log_info("finished waiting");
         // reset the buf 
         memset((void*)recv_buf_ptr, 0, config_info.msg_size);
         opt_count++;
