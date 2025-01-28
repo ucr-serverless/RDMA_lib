@@ -162,6 +162,8 @@ void *server_thread_write_unsignaled(void *arg)
 
     log_info("send buf: %s", send_buf_ptr);
     log_info("recv buf: %s", recv_buf_ptr);
+    log_info("send cpy: %s", send_copy_buf);
+    log_info("recv cpy: %s", recv_copy_buf);
 
     log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
 
