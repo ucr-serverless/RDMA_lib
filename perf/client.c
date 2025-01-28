@@ -284,7 +284,13 @@ void *client_thread_write_unsignaled(void *arg)
         goto error;
     }
 
-    log_info("WRITE LATENCY TASK");
+    if (config_info.copy_mode == 0) {
+        log_info("RDMA ONE SIDE COPY");
+    }
+    else {
+
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
+    }
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {
             // log_info("!! post two side");
@@ -814,7 +820,14 @@ void *client_thread_send_signaled(void *arg)
         goto error;
     }
 
-    log_info("test two side latency");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
+    log_info("RDMA TWO SIDE");
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0)
     {
         log_error("get time error");

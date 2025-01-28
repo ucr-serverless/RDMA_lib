@@ -1,5 +1,6 @@
 #include "rdma_config.h"
 #include <libconfig.h>
+#include <math.h>
 #define _GNU_SOURCE
 #include <stdbool.h>
 #include <stdlib.h>
@@ -181,6 +182,13 @@ void *server_thread_write_unsignaled(void *arg)
     {
         log_error("post shared receive request fail");
         goto error;
+    }
+    if (config_info.copy_mode == 0) {
+        log_info("RDMA ONE SIDE COPY");
+    }
+    else {
+
+        log_info("RDMA ONE SIDE EXTRA MESSAGE");
     }
 
     while(true) {

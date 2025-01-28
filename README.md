@@ -126,14 +126,57 @@ Actually, they are interchangeable to each other. For example:
 
 ### rdma-bench
 
-```bash
-# client
-./build/rdma-bench -d 1 -x 1 -i 1 -p 8090 -t 4 -s 10 -c 1 -n 1000000
-```
+
+The `-t` parameter denotes the type of primitive to use.
+
+
+In the one side mode, the `-t` should be set to be 4.
+
+`-n` is the number of message.
+
+`-s` is the size of the msg.
+
+`-H` paremeter denotes the address of the server.
+
+`-d` is the rdma device index.
+
+`-x` is the gid index
+
+`-i` is the ib port
+
+`-p` is the port
+
+does not change `-c`, this parameter should be set to be 4 in this experiment.
+
+#### two side mode
+
+In the two side mode, the `-t` type parameter should be set to be 1.
 
 ```bash
 # server
-./build/rdma-bench -d 1 -x 1 -i 1 -p 8090 -t 4 -s 10 -c 1 -n 1000000 -H 10.10.1.2
+./build/rdma-bench -d 0 -x 3 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000
+# client
+./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65
 ```
 
+#### one side mode with coordination
+
+```bash
+# client
+./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65
+# server
+./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000
+
+```
+
+#### one side mode with copy
+
 the copy mode requires to add `-y` at the client
+and remember to set the `-t` to be 4
+
+```bash
+# client
+./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65 -y
+# server
+./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -y
+```
