@@ -177,10 +177,10 @@ void *server_thread_write_unsignaled(void *arg)
             sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
         } 
-        log_debug("waiting");
+        // log_debug("waiting");
         while (*recv_buf_ptr != monitor) {
         }
-        log_debug("not waiting");
+        // log_debug("not waiting");
         if (config_info.copy_mode == 1) {
             memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
@@ -196,7 +196,7 @@ void *server_thread_write_unsignaled(void *arg)
         }
 
 
-        log_debug("send buf: %s", send_buf_ptr);
+        // log_debug("send buf: %s", send_buf_ptr);
         ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, opt_count, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
             log_error("post write failed");
@@ -219,7 +219,7 @@ void *server_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        log_debug("get notification");
+        // log_debug("get notification");
         // ensure the wr_id is unique
         opt_count++;
 

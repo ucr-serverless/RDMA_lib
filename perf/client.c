@@ -282,15 +282,15 @@ void *client_thread_write_unsignaled(void *arg)
         }
 
 
-        log_debug("send: %s", send_buf_ptr);
+        // log_debug("send: %s", send_buf_ptr);
         ret = post_write_signaled(*qp, send_buf_ptr, msg_size, lkey, opt_count, remote_recv_buf_ptr, rkey);
         if (ret != RDMA_SUCCESS) {
             log_error("post write failed");
 
         }
 
-        log_info("send buf: %s", send_buf_ptr);
-        log_info("recv buf: %s", recv_buf_ptr);
+        // log_info("send buf: %s", send_buf_ptr);
+        // log_info("recv buf: %s", recv_buf_ptr);
         do
         {
             num_completion = ibv_poll_cq(cq, NUM_WC, wc);
@@ -308,20 +308,20 @@ void *client_thread_write_unsignaled(void *arg)
                 goto error;
             }
         }
-        log_debug("get notification");
+        // log_debug("get notification");
 
         if (config_info.copy_mode == 0) {
             sock_read(config_info.peer_sockfds, &recv_msg_buffer, sizeof(uint64_t));
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
         }
-        log_info("waiting");
+        // log_info("waiting");
         while (*recv_buf_ptr != monitor) {
 
         }
         if (config_info.copy_mode == 1) {
             memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
-        log_info("finished waiting");
+        // log_info("finished waiting");
         // reset the buf 
         memset((void*)recv_buf_ptr, 0, config_info.msg_size);
         opt_count++;
