@@ -273,7 +273,7 @@ void *server_thread_write_unsignaled(void *arg)
         }
         do
         {
-            num_completion = ibv_poll_cq(cq, NUM_WC, wc);
+            num_completion = ibv_poll_cq(cq, 1, wc);
         } while (num_completion == 0);
         if (unlikely(num_completion < 0))
         {

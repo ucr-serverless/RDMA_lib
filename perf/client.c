@@ -334,20 +334,12 @@ void *client_thread_write_unsignaled(void *arg)
         // log_info("recv buf: %s", recv_buf_ptr);
         do
         {
-            num_completion = ibv_poll_cq(cq, NUM_WC, wc);
+            num_completion = ibv_poll_cq(cq, 1, wc);
         } while (num_completion == 0);
         if (unlikely(num_completion < 0))
         {
             log_error("failed to poll cq");
             goto error;
-        }
-        for (int i = 0; i < num_completion; i++)
-        {
-            if (unlikely(wc[i].status != IBV_WC_SUCCESS))
-            {
-                log_error("wc failed status: %s.", ibv_wc_status_str(wc[i].status));
-                goto error;
-            }
         }
         // log_debug("get notification");
 
