@@ -328,6 +328,10 @@ void *client_thread_write_unsignaled(void *arg)
 
     }
 
+    if (clock_gettime(CLOCK_MONOTONIC_RAW, &end) != 0)
+    {
+        log_error("get time error");
+    }
 
 
     // for (int j = 0; j < 40; j++)
