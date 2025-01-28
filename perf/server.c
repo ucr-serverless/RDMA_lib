@@ -600,6 +600,7 @@ void *server_thread_send_signaled(void *arg)
         goto error;
     }
 
+    log_debug("test two side latency");
     while(true) {
         do
         {

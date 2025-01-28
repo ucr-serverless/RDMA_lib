@@ -284,6 +284,7 @@ void *client_thread_write_unsignaled(void *arg)
         goto error;
     }
 
+    log_info("WRITE LATENCY TASK");
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {
             // log_info("!! post two side");
@@ -813,6 +814,7 @@ void *client_thread_send_signaled(void *arg)
         goto error;
     }
 
+    log_info("test two side latency");
     if (clock_gettime(CLOCK_MONOTONIC_RAW, &start) != 0)
     {
         log_error("get time error");
@@ -827,7 +829,7 @@ void *client_thread_send_signaled(void *arg)
             }
             do
             {
-                num_completion = ibv_poll_cq(cq, 2, wc);
+                num_completion = ibv_poll_cq(cq, 1, wc);
             } while (num_completion == 0);
             if (unlikely(num_completion < 0))
             {
