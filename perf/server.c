@@ -142,7 +142,7 @@ void *server_thread_write_unsignaled(void *arg)
     assert(ib_res->ib_buf_size == config_info.msg_size * 2);
 
     char* send_buf_ptr = ib_res->ib_buf;
-    char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+    volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
 
     uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
     uint64_t remote_send_buf_ptr = raddr;
@@ -156,7 +156,7 @@ void *server_thread_write_unsignaled(void *arg)
 
     log_info("msg_sz: %d", config_info.msg_size);
     log_info("buffersz: %d", ib_res->ib_buf_size);
-    memset(recv_buf_ptr, 0, config_info.msg_size);
+    memset((void*)recv_buf_ptr, 0, config_info.msg_size);
     memset(send_buf_ptr, 0, config_info.msg_size);
     send_buf_ptr[0] = monitor;
 
@@ -182,11 +182,11 @@ void *server_thread_write_unsignaled(void *arg)
         }
         log_debug("not waiting");
         if (config_info.copy_mode == 1) {
-            memcpy(recv_copy_buf, recv_buf_ptr, config_info.msg_size);
+            memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
 
         // reset the buf 
-        memset(recv_buf_ptr, 0, config_info.msg_size);
+        memset((void*)recv_buf_ptr, 0, config_info.msg_size);
 
         if (config_info.copy_mode == 0) {
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));

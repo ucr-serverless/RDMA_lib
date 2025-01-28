@@ -232,7 +232,7 @@ void *client_thread_write_unsignaled(void *arg)
     long int total_iter = config_info.total_iter;
 
     char* send_buf_ptr = ib_res->ib_buf;
-    char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
+    volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
 
     uint64_t remote_recv_buf_ptr = raddr + config_info.msg_size;
     uint64_t remote_send_buf_ptr = raddr;
@@ -247,7 +247,7 @@ void *client_thread_write_unsignaled(void *arg)
     log_info("msg_sz: %d", config_info.msg_size);
     log_info("buffersz: %d", ib_res->ib_buf_size);
 
-    memset(recv_buf_ptr, 0, config_info.msg_size);
+    memset((void*)recv_buf_ptr, 0, config_info.msg_size);
     memset(send_buf_ptr, 0, config_info.msg_size);
     send_buf_ptr[0] = monitor;
 
@@ -269,6 +269,10 @@ void *client_thread_write_unsignaled(void *arg)
     {
         log_error("get time error");
     }
+    log_info("send buf: %s", send_buf_ptr);
+    log_info("recv buf: %s", recv_buf_ptr);
+
+
     while(opt_count < config_info.total_iter) {
         if (config_info.copy_mode == 0) {
             sock_write(config_info.peer_sockfds, &send_msg_buffer, sizeof(uint64_t));
@@ -285,6 +289,8 @@ void *client_thread_write_unsignaled(void *arg)
 
         }
 
+        log_info("send buf: %s", send_buf_ptr);
+        log_info("recv buf: %s", recv_buf_ptr);
         do
         {
             num_completion = ibv_poll_cq(cq, NUM_WC, wc);
@@ -310,13 +316,14 @@ void *client_thread_write_unsignaled(void *arg)
         }
         log_info("waiting");
         while (*recv_buf_ptr != monitor) {
+
         }
         if (config_info.copy_mode == 1) {
-            memcpy(recv_copy_buf, recv_buf_ptr, config_info.msg_size);
+            memcpy(recv_copy_buf, (void*)recv_buf_ptr, config_info.msg_size);
         }
         log_info("finished waiting");
         // reset the buf 
-        memset(recv_buf_ptr, 0, config_info.msg_size);
+        memset((void*)recv_buf_ptr, 0, config_info.msg_size);
         opt_count++;
 
     }
