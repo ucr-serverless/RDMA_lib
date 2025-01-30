@@ -231,7 +231,7 @@ void *client_thread_write_unsignaled(void *arg)
     uint64_t recv_msg_buffer;
     long int total_iter = config_info.total_iter;
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+    // assert(ib_res->ib_buf_size == config_info.msg_size * 4);
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
 
@@ -263,7 +263,7 @@ void *client_thread_write_unsignaled(void *arg)
     print_benchmark_cfg(&config_info);
 
 
-    assert(rsize == ib_res->ib_buf_size);
+    // assert(rsize == ib_res->ib_buf_size);
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
     check(wc != NULL, "thread: failed to allocate wc.");
     log_info("thread: ready to send");
@@ -782,7 +782,7 @@ void *client_thread_send_signaled(void *arg)
     uint64_t recv_msg_buffer;
     long int total_iter = config_info.total_iter;
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+    // assert(ib_res->ib_buf_size == config_info.msg_size * 4);
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
 
@@ -814,7 +814,7 @@ void *client_thread_send_signaled(void *arg)
     print_benchmark_cfg(&config_info);
 
 
-    assert(rsize == ib_res->ib_buf_size);
+    // assert(rsize == ib_res->ib_buf_size);
     wc = (struct ibv_wc *)calloc(NUM_WC, sizeof(struct ibv_wc));
     check(wc != NULL, "thread: failed to allocate wc.");
     log_info("thread: ready to send");

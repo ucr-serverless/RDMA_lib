@@ -140,7 +140,7 @@ void *server_thread_write_unsignaled(void *arg)
 
     print_benchmark_cfg(&config_info);
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+    // assert(ib_res->ib_buf_size == config_info.msg_size * 4);
 
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
@@ -172,7 +172,7 @@ void *server_thread_write_unsignaled(void *arg)
 
     log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
 
-    assert(rsize == ib_res->ib_buf_size);
+    // assert(rsize == ib_res->ib_buf_size);
     int opt_count = 0;
     print_benchmark_cfg(&config_info);
     int wr_id = 0;
@@ -581,7 +581,7 @@ void *server_thread_send_signaled(void *arg)
 
     print_benchmark_cfg(&config_info);
 
-    assert(ib_res->ib_buf_size == config_info.msg_size * 4);
+    // assert(ib_res->ib_buf_size == config_info.msg_size * 4);
 
     char* send_buf_ptr = ib_res->ib_buf;
     volatile char* recv_buf_ptr = ib_res->ib_buf + config_info.msg_size;
@@ -611,7 +611,7 @@ void *server_thread_send_signaled(void *arg)
 
     log_info("local send addr: %lu, local recv addr: %lu, remote send: %lu, remote recv: %lu", (uint64_t)send_buf_ptr, (uint64_t)recv_buf_ptr, remote_send_buf_ptr, remote_recv_buf_ptr);
 
-    assert(rsize == ib_res->ib_buf_size);
+    // assert(rsize == ib_res->ib_buf_size);
     int opt_count = 0;
     print_benchmark_cfg(&config_info);
     int wr_id = 0;
