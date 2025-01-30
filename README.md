@@ -153,19 +153,19 @@ does not change `-c`, this parameter should be set to be 4 in this experiment.
 In the two side mode, the `-t` type parameter should be set to be 1.
 
 ```bash
-# server
-./build/rdma-bench -d 0 -x 3 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000
-# client
-./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65
+# client(DPU-1)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 1 -s 60000 -c 4 -n 100000 -H 192.168.10.48
+# server(DPU-3)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 1 -s 60000 -c 4 -n 100000
 ```
 
 #### one side mode with coordination
 
 ```bash
-# client
-./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65
-# server
-./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000
+# client(DPU-1)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.48
+# server(DPU-3)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000
 
 ```
 
@@ -175,8 +175,8 @@ the copy mode requires to add `-y` at the client
 and remember to set the `-t` to be 4
 
 ```bash
-# client
-./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.65 -y
-# server
-./build/rdma-bench -d 0 -x 5 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -y
+# client(DPU-1)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -H 192.168.10.48 -y
+# server(DPU-3)
+./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -y
 ```

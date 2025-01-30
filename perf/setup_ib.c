@@ -196,15 +196,15 @@ int setup_ib(struct IBRes *ib_res)
     /* assume all msgs are of the same content */
     // TODO: change the allocation
     if (config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps < 2048) {
-        ib_res->ib_buf = 2048;
+        ib_res->ib_buf_size = 2048 + 2 * 64;
     } else {
-        ib_res->ib_buf_size = config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps;
+        ib_res->ib_buf_size = config_info.msg_size * config_info.num_concurr_msgs * ib_res->num_qps + 2 * 64;
 
     }
 #ifdef USE_RTE_MEMPOOL
     ib_res->ib_buf = (char *)rte_shm_mgr(ib_res->ib_buf_size);
 #else
-    ib_res->ib_buf = (char *)memalign(4096, ib_res->ib_buf_size);
+    ib_res->ib_buf = (char *)malloc(ib_res->ib_buf_size);
 #endif
     check(ib_res->ib_buf != NULL, "Failed to allocate ib_buf");
 
