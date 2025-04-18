@@ -49,3 +49,4 @@ compile_commands.json
 # ofed installation
 MLNX_OFED_LINUX*/
 ofed.tgz
+build/
