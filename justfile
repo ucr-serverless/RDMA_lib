@@ -8,6 +8,9 @@ reset_main:
 bc:
     cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release && cmake --build ./build
 
+bc:
+    cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build
+
 meson:
     meson setup build && ninja -C build/ -v
 

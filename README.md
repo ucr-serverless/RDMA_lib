@@ -17,7 +17,7 @@ One can manually link with this library with
 
 
 
-```
+```bash
 -L/path/to/this/repo -lRDMA_lib -libverbs -I/path/to/RDMA_lib/include
 ```
 
@@ -27,14 +27,14 @@ Also add the `-I/path/to/RDMA_lib/include` to the cflags
 
 ### meson
 
-```
+```bash
 meson setup build
 ninja -C build/ -v
 ```
 
 Compile this code base to get the static library, then 
 
-```
+```bash
 ibverbs_dep = dependency('libibverbs', required: true)
 incdir = include_directories('<path/to/RDMA_lib/include>')
 rdma_dep = declare_dependency(
