@@ -25,9 +25,9 @@ pkg_check_modules(IBVERBS REQUIRED libibverbs)
 
 # Source files
 set(RDMA_SRC
-  ib.c
-  mr.c
-  qp.c
+  src/ib.c
+  src/mr.c
+  src/qp.c
   utils/log.c
   utils/sock.c
   utils/utils.c
@@ -35,8 +35,9 @@ set(RDMA_SRC
 
 # Static library
 add_library(RDMA_lib STATIC ${RDMA_SRC})
-target_link_libraries(RDMA_lib INTERFACE ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES})
-target_include_directories(RDMA_lib INTERFACE ${LIBCONFIG_LIBRARY_DIRS} ${IBVERBS_LIBRARY_DIRS})
+target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES})
+target_include_directories(RDMA_lib PUBLIC ${LIBCONFIG_LIBRARY_DIRS} ${IBVERBS_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 set_target_properties(RDMA_lib PROPERTIES OUTPUT_NAME "RDMA_lib")
 set_target_properties(RDMA_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 

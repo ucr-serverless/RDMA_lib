@@ -31,9 +31,9 @@ utils_dir = 'utils'
 bin_dir = 'bin'
 
 # Source files
-src_files = files('ib.c', 
-  'mr.c',
-  'qp.c',
+src_files = files('src/ib.c', 
+  'src/mr.c',
+  'src/qp.c',
   'utils/log.c',
   'utils/sock.c',
   'utils/utils.c')

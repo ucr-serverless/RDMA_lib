@@ -3,10 +3,6 @@
 
 ## build the library
 
-```
-meson setup build
-ninja -C build/ -v
-```
 
 ## integrate with other code base
 
@@ -14,35 +10,46 @@ This project will be compiled as a static library to be linked with other codes.
 
 The static binary will be `libRDMA_lib.a` under the project directory after compilation.
 
-### make
+### manually intergration
+
+After compiled this library with either cmake or ninja. One static libaray `libRDMA_lib.a` would be generated under the root of this repository.
+One can manually link with this library with
+
 
 
 ```
--L/path/to/this/repo -lRDMA_lib -libverbs
+-L/path/to/this/repo -lRDMA_lib -libverbs -I/path/to/RDMA_lib/include
 ```
 
-To use this library with a meson project, simply add `subdir('<path_to_this_lib>')` and then use the `libRDMA_lib_dep` in the dependencies of the compilation target.
 
 
 Also add the `-I/path/to/RDMA_lib/include` to the cflags
 
 ### meson
 
+```
+meson setup build
+ninja -C build/ -v
+```
+
 Compile this code base to get the static library, then 
 
 ```
 ibverbs_dep = dependency('libibverbs', required: true)
-incdir = include_directories('RDMA_lib/include')
+incdir = include_directories('<path/to/RDMA_lib/include>')
 rdma_dep = declare_dependency(
   include_directories: incdir,
-  link_args: ['-L' + root_dir + '/RDMA_lib', '-lRDMA_lib', ]
+  link_args: ['-L' + '<path/to/this/lib>', '-lRDMA_lib', ]
   )
 ```
 
-Add the incdir to the include_directories of your target, then add the `rdma_dep` to the dependencies of your target.
+Add the `incdir` to the include_directories of your target, then add the `rdma_dep` to the dependencies of your target.
 
 Also this library requires the ibverbs library, so also add the `ibverbs_dep` to the dependencies of your target.
 
+To use this library with a meson project, simply add `subdir('<path_to_this_lib>')` and then use the `libRDMA_lib_dep` in the dependencies of the compilation target.
+
+### cmake
 
 ## determine RDMA specific settings
 
