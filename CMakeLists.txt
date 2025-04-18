@@ -39,7 +39,13 @@ target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES
 target_include_directories(RDMA_lib PUBLIC ${LIBCONFIG_LIBRARY_DIRS} ${IBVERBS_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set_target_properties(RDMA_lib PROPERTIES OUTPUT_NAME "RDMA_lib")
-set_target_properties(RDMA_lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_custom_command(TARGET RDMA_lib POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:RDMA_lib>
+        ${PROJECT_SOURCE_DIR}/libRDMA_lib.a
+    COMMENT "Copying RDMA_lib.a to project root"
+)
 
 # Binaries
 # function(add_rdma_executable name)
