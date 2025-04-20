@@ -187,3 +187,11 @@ and remember to set the `-t` to be 4
 # server(DPU-3)
 ./build/rdma-bench -d 2 -x 1 -i 1 -p 8090 -t 4 -s 60000 -c 4 -n 100000 -y
 ```
+
+## install DOCA host
+
+The OFED driver is installed as a package in the DOCA host package.
+
+Follow the link of [DOCA host installation][https://developer.nvidia.com/doca-downloads]
+
+
