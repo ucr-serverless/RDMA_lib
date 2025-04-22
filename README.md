@@ -1,5 +1,12 @@
 # RDMA lib
 
+## C library header
+
+For the C library, we can include the `RDMA_c.h` as a all in one solution.
+
+## CPP library header
+
+For the CPP library, we can include the `RDMA_cpp.h` as a all in cone solution.
 
 ## build the library
 

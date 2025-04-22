@@ -13,6 +13,10 @@
 
 #define MAX_N_SGE 50
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct ib_ctx
 {
     struct ibv_device *device;
@@ -115,4 +119,9 @@ int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uin
 
 int post_write_imm_unsignaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /*ib.h*/
