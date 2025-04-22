@@ -71,13 +71,13 @@ enable_testing()
 
 file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
 
-add_executable(unit_tests ${TEST_SOURCES})
+add_executable(${CMAKE_PROJECT_NAME}_unit_tests ${TEST_SOURCES})
 # gtest_main have the main function so no need for main function in tests
 # use the fmt-header-only target to avoid link error
-target_link_libraries(unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp)
+target_link_libraries(${CMAKE_PROJECT_NAME}_unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp)
 
 include(GoogleTest)
-gtest_discover_tests(unit_tests)
+gtest_discover_tests(${CMAKE_PROJECT_NAME}_unit_tests)
 
 
 add_executable(ping_pong ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pong.c)
