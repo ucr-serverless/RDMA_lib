@@ -17,4 +17,9 @@ meson:
 
 clean:
     rm -rf build/
+    rm -rf bin/
     rm libRDMA_lib.a
+    rm libRDMA_lib_cpp.a
+
+fmt:
+    clang-format -i src/c/*.c src/cpp/*.cpp include/c/*.h include/cpp/*.h utils/*.c utils/*.h

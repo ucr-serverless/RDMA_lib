@@ -78,6 +78,16 @@ target_link_libraries(unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp)
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+
+add_executable(ping_pong ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pong.c)
+target_link_libraries(ping_pong PRIVATE RDMA_lib)
+target_include_directories(ping_pong PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+
+
+add_executable(ping_pong_cmplt_cnl ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pong_cmplt_cnl.c)
+target_link_libraries(ping_pong_cmplt_cnl PRIVATE RDMA_lib)
+target_include_directories(ping_pong_cmplt_cnl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 # Binaries
 # function(add_rdma_executable name)
 #   add_executable(${name} ${ARGN} ${RDMA_SRC})

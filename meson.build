@@ -19,25 +19,20 @@ if libdpdk_dep.found()
   #ldflags = libdpdk_dep.get_link_args()
 endif
 
-inc_dirs = include_directories('.', 'test/unity', 'perf', 'include', 'utils')
+inc_dirs = include_directories('perf', 'include/c', 'utils')
 
 
 # Directories
-test_dir = 'test'
 perf_dir = 'perf'
-unity_dir = 'test/unity'
 example_dir = 'examples'
-utils_dir = 'utils'
-bin_dir = 'bin'
 
 # Source files
-src_files = files('src/ib.c', 
-  'src/mr.c',
-  'src/qp.c',
+src_files = files('src/c/ib.c', 
+  'src/c/mr.c',
+  'src/c/qp.c',
   'utils/log.c',
   'utils/sock.c',
   'utils/utils.c')
-unity_files = files(join_paths(unity_dir, 'unity.c'))
 
 # Programs
 bin_programs = [
@@ -51,7 +46,6 @@ bin_programs = [
   ['ping_pong', files(join_paths(example_dir, 'ping_pong.c'))],
   ['ping_pong_cmplt_cnl', files(join_paths(example_dir, 'ping_pong_cmplt_cnl.c'))],
   ['test_socket', files(join_paths(example_dir, 'test_socket.c'))],
-  ['test_config', files('test/unity/unity.c', 'test/test_config.c')]
 ]
 
 libRDMA_lib = static_library(

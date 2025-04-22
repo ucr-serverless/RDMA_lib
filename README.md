@@ -3,6 +3,12 @@
 
 ## build the library
 
+This library provides two interfaces, one is for c named `libRDMA_lib` and the other is for cpp which is `libRDMA_lib_cpp`
+
+*For Now the meson would only compile the libRDMA_lib*
+
+*The Cmake would compile both*
+
 
 ## integrate with other code base
 
