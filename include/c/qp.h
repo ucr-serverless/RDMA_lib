@@ -1,8 +1,8 @@
 #ifndef QP_H_
 #define QP_H_
 
-#include "rdma_config.h"
 #include "ib.h"
+#include "rdma_config.h"
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
 

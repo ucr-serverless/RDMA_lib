@@ -4,5 +4,4 @@
 void dummy()
 {
     std::cout << "test cpp" << std::endl;
-
 }
