@@ -5,10 +5,11 @@ reset_main:
     git fetch
     git reset --hard origin/main
 
-bc:
+br:
     cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release && cmake --build ./build
 
-bc:
+alias bc := build_c
+build_c:
     cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build
 
 meson:

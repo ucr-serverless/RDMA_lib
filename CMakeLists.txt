@@ -1,16 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
-project(RDMA_lib C)
+project(RDMA_lib C CXX)
 
 # Global compiler flags
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wno-unused-parameter -Wno-sign-compare -Wno-pointer-arith -Wno-conversion -O3")
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Include directories
 include_directories(
-  ${PROJECT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}/include
-  ${PROJECT_SOURCE_DIR}/test/unity
-  ${PROJECT_SOURCE_DIR}/perf
-  ${PROJECT_SOURCE_DIR}/utils
 )
 
 # Dependencies
@@ -24,19 +23,20 @@ pkg_check_modules(IBVERBS REQUIRED libibverbs)
 # link_directories(${LIBCONFIG_LIBRARY_DIRS} ${IBVERBS_LIBRARY_DIRS})
 
 # Source files
-set(RDMA_SRC
-  src/ib.c
-  src/mr.c
-  src/qp.c
+set(RDMA_C_SRC
+  src/c/ib.c
+  src/c/mr.c
+  src/c/qp.c
   utils/log.c
   utils/sock.c
   utils/utils.c
 )
 
 # Static library
-add_library(RDMA_lib STATIC ${RDMA_SRC})
+add_library(RDMA_lib STATIC ${RDMA_C_SRC})
 target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES})
-target_include_directories(RDMA_lib PUBLIC ${LIBCONFIG_LIBRARY_DIRS} ${IBVERBS_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(RDMA_lib PRIVATE ${LIBCONFIG_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+target_include_directories(RDMA_lib PUBLIC ${IBVERBS_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include/c)
 
 set_target_properties(RDMA_lib PROPERTIES OUTPUT_NAME "RDMA_lib")
 
@@ -47,6 +47,37 @@ add_custom_command(TARGET RDMA_lib POST_BUILD
     COMMENT "Copying RDMA_lib.a to project root"
 )
 
+file(GLOB RDMA_CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp)
+add_library(RDMA_lib_cpp STATIC ${RDMA_CPP_SRC})
+target_link_libraries(RDMA_lib_cpp PUBLIC RDMA_lib)
+target_include_directories(RDMA_lib_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/cpp)
+
+add_custom_command(TARGET RDMA_lib_cpp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        $<TARGET_FILE:RDMA_lib_cpp>
+        ${PROJECT_SOURCE_DIR}/libRDMA_lib_cpp.a
+    COMMENT "Copying RDMA_lib_cpp.a to project root"
+)
+
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/heads/main.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+
+file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
+
+add_executable(unit_tests ${TEST_SOURCES})
+# gtest_main have the main function so no need for main function in tests
+# use the fmt-header-only target to avoid link error
+target_link_libraries(unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp)
+
+include(GoogleTest)
+gtest_discover_tests(unit_tests)
 # Binaries
 # function(add_rdma_executable name)
 #   add_executable(${name} ${ARGN} ${RDMA_SRC})
