@@ -32,7 +32,6 @@ set(RDMA_C_SRC
   utils/utils.c
 )
 
-# Static library
 add_library(RDMA_lib STATIC ${RDMA_C_SRC})
 target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES})
 target_include_directories(RDMA_lib PRIVATE ${LIBCONFIG_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/utils)
@@ -48,7 +47,7 @@ add_custom_command(TARGET RDMA_lib POST_BUILD
 )
 
 file(GLOB RDMA_CPP_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/cpp/*.cpp)
-add_library(RDMA_lib_cpp STATIC ${RDMA_CPP_SRC})
+add_library(RDMA_lib_cpp STATIC ${RDMA_CPP_SRC} )
 target_link_libraries(RDMA_lib_cpp PUBLIC RDMA_lib)
 target_include_directories(RDMA_lib_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/cpp)
 
@@ -74,7 +73,8 @@ file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
 add_executable(${CMAKE_PROJECT_NAME}_unit_tests ${TEST_SOURCES})
 # gtest_main have the main function so no need for main function in tests
 # use the fmt-header-only target to avoid link error
-target_link_libraries(${CMAKE_PROJECT_NAME}_unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp)
+target_link_libraries(${CMAKE_PROJECT_NAME}_unit_tests PRIVATE GTest::gtest_main RDMA_lib_cpp )
+# target_include_directories(${CMAKE_PROJECT_NAME}_unit_tests PRIVATE ${CMAKE_SOURCE_DIR}/include/cpp ${CMAKE_SOURCE_DIR}/include/c)
 
 include(GoogleTest)
 gtest_discover_tests(${CMAKE_PROJECT_NAME}_unit_tests)

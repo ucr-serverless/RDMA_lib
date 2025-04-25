@@ -16,6 +16,38 @@
 #include "sock.h"
 #include "utils.h"
 
+struct ibv_device* rdma_find_dev(const char *ib_devname)
+{
+	int num_of_device;
+	struct ibv_device **dev_list;
+	struct ibv_device *ib_dev = NULL;
+
+	dev_list = ibv_get_device_list(&num_of_device);
+
+	//coverity[uninit_use]
+	if (num_of_device <= 0) {
+		fprintf(stderr," Did not detect devices \n");
+		fprintf(stderr," If device exists, check if driver is up\n");
+        goto error;
+	}
+
+	if (!ib_devname) {
+        goto error;
+	} else {
+		for (; (ib_dev = *dev_list); ++dev_list)
+			if (!strcmp(ibv_get_device_name(ib_dev), ib_devname))
+                goto success;
+		if (!ib_dev) {
+			fprintf(stderr, "IB device %s not found\n", ib_devname);
+            goto error;
+		}
+	}
+error:
+    return NULL;
+success:
+	return ib_dev;
+}
+
 int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buffers, void **remote_buffers)
 {
     int num_of_device;

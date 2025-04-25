@@ -23,3 +23,6 @@ clean:
 
 fmt:
     clang-format -i src/c/*.c src/cpp/*.cpp include/c/*.h include/cpp/*.h utils/*.c utils/*.h
+
+tc:
+    cd build && ctest
