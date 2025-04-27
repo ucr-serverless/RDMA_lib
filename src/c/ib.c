@@ -61,7 +61,13 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         log_error(" If device exists, check if driver is up\n");
         goto error;
     }
-    ctx->device = dev_list[params->device_idx];
+    if (params->device_str) {
+        ctx->device = rdma_find_dev(params->device_str);
+    }
+    else {
+        ctx->device = dev_list[params->device_idx];
+
+    }
     if (unlikely(!(ctx->device)))
     {
         log_error("Can not open device %d", params->device_idx);

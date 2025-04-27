@@ -12,6 +12,7 @@ extern "C" {
 
 struct rdma_param
 {
+    const char* device_str;
     uint32_t device_idx;
     uint32_t sgid_idx;
     uint32_t qp_num;
