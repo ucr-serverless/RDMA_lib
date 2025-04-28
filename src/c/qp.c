@@ -7,6 +7,121 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+int init_srq(struct ibv_pd* pd, struct ibv_device_attr* device_attr, int max_wr, int max_sge, struct ibv_srq** srq)
+{
+    int init_max_wr = max_wr;
+    int init_max_sge = max_sge;
+    if (device_attr) {
+        init_max_wr = device_attr->max_srq_wr - 1;
+        init_max_sge = device_attr->max_srq_sge - 1;
+    }
+    struct ibv_srq_init_attr attr = {.attr = {/* when using sreq, rx_depth sets the max_wr */
+                                              .max_wr = init_max_wr,
+                                              .max_sge = init_max_sge}};
+    int retry_cnt = 0;
+
+    do
+    {
+        *srq = ibv_create_srq(pd, &attr);
+        attr.attr.max_wr /= 2;
+        attr.attr.max_sge /= 2;
+        retry_cnt++;
+    } while (!*srq && retry_cnt < RETRY_MAX);
+    if (*srq) {
+        return RDMA_SUCCESS;
+    }
+    return RDMA_FAILURE;
+}
+
+int init_rc_qp(struct ibv_pd *pd, struct ibv_cq* send_cq, struct ibv_cq* recv_cq, struct ibv_srq* srq ,uint32_t max_send_wr, struct ibv_qp **qp)
+{
+    assert(max_send_wr != 0);
+    struct ibv_qp_init_attr qp_init_attr = {
+        .send_cq = send_cq,
+        .recv_cq = recv_cq,
+        .srq = srq,
+        .cap =
+            {
+                .max_send_wr = max_send_wr,
+                .max_recv_wr = 64,
+                .max_send_sge = 1,
+                .max_recv_sge = 1,
+            },
+        .qp_type = IBV_QPT_RC,
+        .sq_sig_all = 0,
+    };
+
+    *qp = ibv_create_qp(pd, &qp_init_attr);
+
+    if (unlikely(!(*qp)))
+    {
+        log_error("Error init qp");
+        goto error;
+    }
+
+    return RDMA_SUCCESS;
+error:
+    return RDMA_FAILURE;
+}
+
+int init_multi_rc_qp(struct ibv_pd *pd, struct ibv_cq* send_cq, struct ibv_cq* recv_cq, struct ibv_srq* srq ,uint32_t max_send_wr, struct ibv_qp **qp, uint16_t n_qp)
+{
+    assert(max_send_wr != 0);
+    struct ibv_qp_init_attr qp_init_attr = {
+        .send_cq = send_cq,
+        .recv_cq = recv_cq,
+        .srq = srq,
+        .cap =
+            {
+                .max_send_wr = max_send_wr,
+                .max_recv_wr = 64,
+                .max_send_sge = 1,
+                .max_recv_sge = 1,
+            },
+        .qp_type = IBV_QPT_RC,
+        .sq_sig_all = 0,
+    };
+
+    size_t i = 0;
+    for (; i < n_qp; i++) {
+        qp[i] = ibv_create_qp(pd, &qp_init_attr);
+        if (!qp[i])
+        {
+            log_error("Error init qp %d", i);
+            goto error;
+        }
+    }
+
+
+    return RDMA_SUCCESS;
+error:
+    for (size_t j = 0; j < i; j++) {
+        if (qp[j]) {
+            ibv_destroy_qp(qp[i]);
+        }
+    }
+    return RDMA_FAILURE;
+
+}
+
+int init_cq(struct ibv_context *context, uint32_t init_cqe, struct ibv_comp_channel* channel, struct ibv_cq **cq)
+{
+    assert(init_cqe);
+    size_t retry_cnt = 0;
+    do
+    {
+        *cq = ibv_create_cq(context, init_cqe, NULL, channel, 0);
+        init_cqe /= 2;
+        retry_cnt++;
+    } while (!*cq && retry_cnt < RETRY_MAX);
+    if (unlikely(!*cq))
+    {
+        log_error("Error, ibv_create_qp() send completion queue failed\n");
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
+
 int init_rc_qp_srq_unsignaled(struct ib_ctx *ctx, struct ibv_qp **qp, uint32_t max_send_wr)
 {
     assert(max_send_wr != 0);

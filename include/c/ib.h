@@ -20,6 +20,7 @@ extern "C" {
 struct ib_ctx
 {
     struct ibv_device *device;
+    // if the device_str is used, the device_idx is not meaningful
     int device_idx;
     struct ibv_context *context;
     struct ibv_pd *pd;

@@ -170,7 +170,8 @@ int main(int argc, char *argv[])
     int ret = 0;
     if (is_server)
     {
-        modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid, local_res.psn, local_res.ib_port, local_res.sgid_idx);
+        // modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
 
         ret = post_srq_recv(ctx.srq, local_res.mrs[1].addr, local_res.mrs[1].length, local_res.mrs[1].lkey, 0);
         if (ret != RDMA_SUCCESS)
