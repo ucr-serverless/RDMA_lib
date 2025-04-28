@@ -5,6 +5,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+
+int deregister_mr(struct ibv_mr* mr)
+{
+    return ibv_dereg_mr(mr);
+}
+
 int register_local_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr)
 {
     *mr = ibv_reg_mr(pd, addr, length, IBV_ACCESS_LOCAL_WRITE);

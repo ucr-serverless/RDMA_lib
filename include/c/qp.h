@@ -31,9 +31,11 @@ int modify_qp_rtr_to_rts(struct ibv_qp *qp, struct ib_res *local_res);
 
 int modify_qp_init_to_rts(struct ibv_qp *qp, struct ib_res *local_res, struct ib_res *remote_res, uint32_t r_qp_num);
 
+
 int modify_qp_to_error(struct ibv_qp *qp);
 
 int modify_qp_to_reset(struct ibv_qp *qp);
+
 
 #ifdef __cplusplus
 }

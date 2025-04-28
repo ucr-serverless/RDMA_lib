@@ -13,6 +13,7 @@ extern "C" {
 #endif
 
 
+int deregister_mr(struct ibv_mr* mr);
 int register_local_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr);
 int register_remote_mr(struct ibv_pd *pd, void *addr, size_t length, struct ibv_mr **mr);
 
