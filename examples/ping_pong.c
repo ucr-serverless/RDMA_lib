@@ -127,7 +127,6 @@ int main(int argc, char *argv[])
         assert(peer_fd > 0);
 
         recv_ib_res(&remote_res, peer_fd);
-        send_ib_res(&local_res, peer_fd);
     }
     else
     {
@@ -170,8 +169,16 @@ int main(int argc, char *argv[])
     int ret = 0;
     if (is_server)
     {
-        connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid, local_res.psn, local_res.ib_port, local_res.sgid_idx);
+        ret = connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid, local_res.psn, local_res.ib_port, local_res.sgid_idx);
+        log_info("qp connected");
+        if (ret != RDMA_SUCCESS)
+        {
+            log_error("connect rc qp failure");
+        }
         // modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
+        sleep(1);
+        log_info("delay send qp information");
+        send_ib_res(&local_res, peer_fd);
 
         ret = post_srq_recv(ctx.srq, local_res.mrs[1].addr, local_res.mrs[1].length, local_res.mrs[1].lkey, 0);
         if (ret != RDMA_SUCCESS)
