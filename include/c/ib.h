@@ -63,7 +63,7 @@ void destroy_ib_ctx(struct ib_ctx *ctx);
 
 struct mr_info
 {
-    void *addr;
+    uint64_t addr;
     size_t length;
     uint32_t lkey;
     uint32_t rkey;
@@ -89,10 +89,10 @@ int send_ib_res(struct ib_res *local_ib_res, int sock_fd);
 int recv_ib_res(struct ib_res *remote_ib_res, int sock_fd);
 void destroy_ib_res(struct ib_res *res);
 
-int post_send_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_send_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                        uint32_t imm_data);
 
-int post_send_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_send_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                          uint32_t imm_data);
 
 int post_send_sg_list_signaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id,
@@ -101,24 +101,27 @@ int post_send_sg_list_signaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uint3
 int post_send_sg_list_unsignaled(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id,
                                  uint32_t imm_data);
 
-int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id);
+int post_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id);
 
-int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int pre_post_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                            uint32_t num);
 
 int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t sg_list_len, uint64_t wr_id);
 
-int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id);
-int post_write_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint64_t raddr,
+int post_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id);
+
+int post_multiple_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t buf_size, uint32_t lkey, size_t n_srq_recv);
+
+int post_write_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint64_t raddr,
                         uint32_t rkey);
 
-int post_write_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                           uint64_t raddr, uint32_t rkey);
 
-int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                             uint64_t raddr, uint32_t rkey, uint32_t imm_data);
 
-int post_write_imm_unsignaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data);
 
 #ifdef __cplusplus

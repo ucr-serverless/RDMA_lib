@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
         }
         const char *test_str = "Hello, world!";
 
-        strncpy(local_res.mrs[0].addr, test_str, MR_SIZE);
+        strncpy((void *)local_res.mrs[0].addr, test_str, MR_SIZE);
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);

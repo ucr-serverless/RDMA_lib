@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
         epoll_ctl(ep, EPOLL_CTL_ADD, send_fd, &ep_ev_sd);
         epoll_ctl(ep, EPOLL_CTL_ADD, recv_fd, &ep_ev_rc);
 
-        strncpy(local_res.mrs[0].addr, test_str, MR_SIZE);
+        strncpy((void*)local_res.mrs[0].addr, test_str, MR_SIZE);
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);

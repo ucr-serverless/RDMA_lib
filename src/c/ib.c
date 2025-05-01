@@ -345,7 +345,7 @@ void print_ib_res(struct ib_res *res)
         printf("\tlength: %lu\n", res->mrs[i].length);
         printf("\tlkey: %u\n", res->mrs[i].lkey);
         printf("\trkey: %u\n", res->mrs[i].rkey);
-        printf("\taddr: %p\n", res->mrs[i].addr);
+        printf("\taddr: %p\n", (void*)res->mrs[i].addr);
     }
     printf("n_qp: %u\n", res->n_mr);
     for (size_t i = 0; i < res->n_qp; i++)
@@ -390,7 +390,7 @@ int init_local_ib_res(struct ib_ctx *ctx, struct ib_res *res)
         res->mrs[i].length = ctx->remote_mrs[i]->length;
         res->mrs[i].lkey = ctx->remote_mrs[i]->lkey;
         res->mrs[i].rkey = ctx->remote_mrs[i]->rkey;
-        res->mrs[i].addr = ctx->remote_mrs[i]->addr;
+        res->mrs[i].addr = (uint64_t)ctx->remote_mrs[i]->addr;
     }
     return RDMA_SUCCESS;
 error:
@@ -521,7 +521,7 @@ int post_send_sg_list(struct ibv_qp *qp, struct ibv_sge *sg_list, uint32_t sg_li
     return RDMA_SUCCESS;
 }
 
-int post_send(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data,
+int post_send(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint32_t imm_data,
               int flag)
 {
     struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
@@ -529,14 +529,14 @@ int post_send(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, ui
     return post_send_sg_list(qp, &list, 1, wr_id, imm_data, flag);
 }
 
-int post_send_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_send_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                        uint32_t imm_data)
 
 {
     return post_send(qp, buf, req_size, lkey, wr_id, imm_data, IBV_SEND_SIGNALED);
 }
 
-int post_send_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_send_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                          uint32_t imm_data)
 {
     return post_send(qp, buf, req_size, lkey, wr_id, imm_data, 0);
@@ -572,7 +572,7 @@ int post_srq_recv_sg_list(struct ibv_srq *srq, struct ibv_sge *sg_list, uint32_t
     return RDMA_SUCCESS;
 }
 
-int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id)
+int post_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id)
 {
     int ret = 0;
     struct ibv_recv_wr *bad_recv_wr;
@@ -589,7 +589,24 @@ int post_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lk
     return RDMA_SUCCESS;
 }
 
-int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id)
+int post_multiple_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t buf_size, uint32_t lkey, size_t n_srq_recv)
+{
+    int ret = RDMA_SUCCESS;
+    for(size_t i = 0; i < n_srq_recv; i++)
+    {
+        ret = post_dumb_srq_recv(srq, buf, buf_size, lkey, i);
+        if (ret == RDMA_FAILURE)
+        {
+            return RDMA_FAILURE;
+        }
+
+    }
+
+    return RDMA_SUCCESS;
+
+}
+
+int post_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t buf_size, uint32_t lkey, uint64_t wr_id)
 {
     int ret = 0;
     ret = post_srq_recv(srq, buf, buf_size, lkey, wr_id);
@@ -600,7 +617,7 @@ int post_dumb_srq_recv(struct ibv_srq *srq, void *buf, uint32_t buf_size, uint32
     }
     return RDMA_SUCCESS;
 }
-int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int pre_post_dumb_srq_recv(struct ibv_srq *srq, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                            uint32_t num)
 {
     int ret = 0;
@@ -615,7 +632,7 @@ int pre_post_dumb_srq_recv(struct ibv_srq *srq, char *buf, uint32_t req_size, ui
     }
     return RDMA_SUCCESS;
 }
-int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, uint64_t buf, uint64_t raddr,
                uint32_t rkey, int send_flag)
 {
     int ret = 0;
@@ -641,19 +658,19 @@ int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *
     return RDMA_SUCCESS;
 }
 
-int post_write_signaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint64_t raddr,
+int post_write_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id, uint64_t raddr,
                         uint32_t rkey)
 {
     return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, IBV_SEND_SIGNALED);
 }
 
-int post_write_unsignaled(struct ibv_qp *qp, char *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                           uint64_t raddr, uint32_t rkey)
 {
     return post_write(req_size, lkey, wr_id, qp, buf, raddr, rkey, 0);
 }
 
-int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, char *buf, uint64_t raddr,
+int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, uint64_t buf, uint64_t raddr,
                    uint32_t rkey, uint32_t imm_data, int flag)
 {
     int ret = 0;
@@ -680,13 +697,13 @@ int post_write_imm(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_
     return RDMA_SUCCESS;
 }
 
-int post_write_imm_signaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_signaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                             uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, IBV_SEND_SIGNALED);
 }
 
-int post_write_imm_unsignaled(struct ibv_qp *qp, void *buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
+int post_write_imm_unsignaled(struct ibv_qp *qp, uint64_t buf, uint32_t req_size, uint32_t lkey, uint64_t wr_id,
                               uint64_t raddr, uint32_t rkey, uint32_t imm_data)
 {
     return post_write_imm(req_size, lkey, wr_id, qp, buf, raddr, rkey, imm_data, 0);
