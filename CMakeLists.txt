@@ -15,6 +15,14 @@ include_directories(
 # Dependencies
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
+# find_package(glog REQUIRED)
+#
+# if(glog_FOUND)
+#     message(STATUS "glog found")
+# else()
+#     message(STATUS "install with sudo apt-get install libgoogle-glog-dev")
+# endif()
+
 pkg_check_modules(LIBCONFIG REQUIRED libconfig)
 pkg_check_modules(IBVERBS REQUIRED libibverbs)
 # pkg_check_modules(DPDK libdpdk) # Optional
@@ -59,20 +67,6 @@ add_custom_command(TARGET RDMA_lib_cpp POST_BUILD
 )
 find_package(CUDA QUIET)
 
-# --- Check CUDA_FOUND and provide feedback ---
-# This variable now acts as your conditional indicator.
-if(CUDA_FOUND)
-    message(STATUS "CUDA found.")
-    message(STATUS "  CUDA Version: ${CUDA_VERSION}")
-    message(STATUS "  NVCC Executable: ${CUDA_NVCC_EXECUTABLE}")
-    # Optionally enable CUDA language support globally if many targets use it,
-    # although it's often implicitly handled when adding .cu files or linking CUDA::* targets.
-    # enable_language(CUDA)
-else()
-    message(STATUS "CUDA not found by CMake.")
-    # You could make this a FATAL_ERROR if CUDA is absolutely required for the project
-    # message(FATAL_ERROR "CUDA Toolkit is required but was not found.")
-endif()
 
 include(FetchContent)
 FetchContent_Declare(
@@ -104,6 +98,21 @@ target_include_directories(ping_pong PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 add_executable(ping_pong_cmplt_cnl ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pong_cmplt_cnl.c)
 target_link_libraries(ping_pong_cmplt_cnl PRIVATE RDMA_lib)
 target_include_directories(ping_pong_cmplt_cnl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+
+# --- Check CUDA_FOUND and provide feedback ---
+# This variable now acts as your conditional indicator.
+if(CUDA_FOUND)
+    message(STATUS "CUDA found.")
+    message(STATUS "  CUDA Version: ${CUDA_VERSION}")
+    message(STATUS "  NVCC Executable: ${CUDA_NVCC_EXECUTABLE}")
+    add_executable(ping_pong_gpu ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pong_gpu.cpp)
+    target_link_libraries(ping_pong_gpu PRIVATE RDMA_lib)
+    target_link_libraries(ping_pong_gpu PRIVATE ${CUDA_LIBRARIES})
+    target_include_directories(ping_pong_gpu PUBLIC ${CUDA_INCLUDE_DIRS})
+    target_include_directories(ping_pong_gpu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+else()
+    message(STATUS "CUDA not found by CMake.")
+endif()
 # Binaries
 # function(add_rdma_executable name)
 #   add_executable(${name} ${ARGN} ${RDMA_SRC})
