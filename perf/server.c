@@ -13,8 +13,9 @@
 #include "rdma-bench_cfg.h"
 #include "server.h"
 #include "setup_ib.h"
-#include "sock.h"
 #include "utils.h"
+
+#define SOCK_SYNC_MSG "sync"
 
 struct args
 {

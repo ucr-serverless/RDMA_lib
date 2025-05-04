@@ -6,7 +6,10 @@
 #include <unistd.h>
 
 #include "log.h"
-#include "sock.h"
+#include <errno.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <sys/types.h>
 
 ssize_t sock_read(int sock_fd, void *buffer, size_t len)
 {

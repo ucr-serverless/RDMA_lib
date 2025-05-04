@@ -2,7 +2,6 @@
 #define BENCHMARK_CFG_
 
 #include "log.h"
-#include "sock.h"
 #include "utils.h"
 #include <assert.h>
 #include <inttypes.h>

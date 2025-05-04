@@ -4,7 +4,6 @@
 #include "qp.h"
 #include "rdma_config.h"
 #include "RDMA_c.h"
-#include "sock.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <bits/getopt_core.h>

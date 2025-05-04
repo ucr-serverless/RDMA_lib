@@ -15,8 +15,9 @@
 #include "qp.h"
 #include "rdma_config.h"
 #include "setup_ib.h"
-#include "sock.h"
 #include "utils.h"
+
+#define SOCK_SYNC_MSG "sync"
 
 #define NS_PER_SEC 1E9  /* Nano-seconds per second */
 struct args

@@ -2,7 +2,6 @@
 #define SETUP_IB_H_
 
 #include "rdma-bench_cfg.h"
-#include "sock.h"
 #include <assert.h>
 #include <infiniband/verbs.h>
 struct IBRes

@@ -5,7 +5,6 @@
 #include "memory_management.h"
 #include "qp.h"
 #include "rdma_config.h"
-#include "sock.h"
 #include "utils.h"
 #include <arpa/inet.h>
 #include <bits/getopt_core.h>

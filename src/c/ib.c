@@ -13,7 +13,6 @@
 #include "mr.h"
 #include "qp.h"
 #include "rdma_config.h"
-#include "sock.h"
 #include "utils.h"
 
 struct ibv_device* rdma_find_dev(const char *ib_devname)

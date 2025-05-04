@@ -57,6 +57,22 @@ add_custom_command(TARGET RDMA_lib_cpp POST_BUILD
         ${PROJECT_SOURCE_DIR}/libRDMA_lib_cpp.a
     COMMENT "Copying RDMA_lib_cpp.a to project root"
 )
+find_package(CUDA QUIET)
+
+# --- Check CUDA_FOUND and provide feedback ---
+# This variable now acts as your conditional indicator.
+if(CUDA_FOUND)
+    message(STATUS "CUDA found.")
+    message(STATUS "  CUDA Version: ${CUDA_VERSION}")
+    message(STATUS "  NVCC Executable: ${CUDA_NVCC_EXECUTABLE}")
+    # Optionally enable CUDA language support globally if many targets use it,
+    # although it's often implicitly handled when adding .cu files or linking CUDA::* targets.
+    # enable_language(CUDA)
+else()
+    message(STATUS "CUDA not found by CMake.")
+    # You could make this a FATAL_ERROR if CUDA is absolutely required for the project
+    # message(FATAL_ERROR "CUDA Toolkit is required but was not found.")
+endif()
 
 include(FetchContent)
 FetchContent_Declare(

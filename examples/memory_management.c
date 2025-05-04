@@ -2,7 +2,6 @@
 #include "bitmap.h"
 #include "ib.h"
 #include "log.h"
-#include "sock.h"
 #include "utils.h"
 #include <sched.h>
 #include <stdbool.h>

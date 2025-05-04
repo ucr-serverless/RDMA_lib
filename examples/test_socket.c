@@ -1,6 +1,5 @@
 #define _GNU_SOURCE
 #include "ib.h"
-#include "sock.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <bits/getopt_core.h>
