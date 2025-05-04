@@ -17,6 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <cuda_runtime.h>
+#include <string>
 
 #define MR_SIZE 10240
 
@@ -90,9 +91,13 @@ int main(int argc, char *argv[])
         .n_recv_wc = 10,
     };
 
+
     void **buffers = (void **)calloc(rparams.remote_mr_num, sizeof(void *));
     assert(buffers);
-    void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
+
+    void * buf;
+    cudaMalloc(&buf, rparams.remote_mr_num * rparams.remote_mr_size);
+    // void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
     assert(buf);
     for (size_t i = 0; i < rparams.remote_mr_num; i++)
     {
@@ -184,9 +189,12 @@ int main(int argc, char *argv[])
         {
             printf("post recv request failed");
         }
-        const char *test_str = "Hello, world!";
+        // const char *test_str = "Hello, world!";
+        std::string a = "Hello, GPU";
 
-        strncpy(reinterpret_cast<char *>(local_res.mrs[0].addr), test_str, MR_SIZE);
+        cudaMemcpy(reinterpret_cast<char *>(local_res.mrs[0].addr), a.c_str(), a.size(), cudaMemcpyHostToDevice);
+        // cudaMemCpy()
+        // strncpy(reinterpret_cast<char *>(local_res.mrs[0].addr), test_str, MR_SIZE);
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
@@ -202,7 +210,7 @@ int main(int argc, char *argv[])
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
         printf("Got recv cqe!!\n");
-        printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
+        // printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
         close(self_fd);
         close(peer_fd);
     }
@@ -224,8 +232,11 @@ int main(int argc, char *argv[])
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+
+        char buf[20];
+        cudaMemcpy(buf, reinterpret_cast<char *>(local_res.mrs[0].addr), 20, cudaMemcpyDeviceToHost);
         printf("Got recv cqe!!\n");
-        printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
+        printf("Received string from Server: %s\n", buf);
 
         // it is a good practice to post receive request after it is consumed.
         // In this example this one will not be consumed
@@ -251,7 +262,7 @@ int main(int argc, char *argv[])
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);
-    free(buf);
+    cudaFree(buf);
     free(buffers);
     return 0;
 }
