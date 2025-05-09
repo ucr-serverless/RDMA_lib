@@ -188,8 +188,10 @@ int main(int argc, char *argv[])
 
         strncpy((void *)local_res.mrs[0].addr, test_str, MR_SIZE);
 
+        // imm data is 42
+        uint32_t imm = 42;
         ret =
-            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, imm);
 
         struct ibv_wc wc;
         int wc_num = 0;
@@ -197,12 +199,16 @@ int main(int argc, char *argv[])
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
         printf("Got send cqe!!\n");
+        printf("The imm_data sent is %d\n", imm);
+        printf("The imm data in the wc is %d\n", wc.imm_data);
 
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+
         printf("Got recv cqe!!\n");
         printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
+        printf("Received imm data: %d\n", ntohl(wc.imm_data));
         close(self_fd);
         close(peer_fd);
     }
@@ -226,6 +232,8 @@ int main(int argc, char *argv[])
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
         printf("Got recv cqe!!\n");
         printf("Received string from Server: %s\n", (char *)local_res.mrs[0].addr);
+        printf("Received raw imm data %d\n", wc.imm_data);
+        printf("Received imm data %d\n", ntohl(wc.imm_data));
 
         // it is a good practice to post receive request after it is consumed.
         // In this example this one will not be consumed
@@ -236,7 +244,7 @@ int main(int argc, char *argv[])
         }
 
         ret =
-            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, ntohl(wc.imm_data));
         // poll the send_cq for the ack of send.
         do
         {
