@@ -183,11 +183,16 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
         goto error;
     }
 
-    if (unlikely(init_multiple_rc_qp_srq_unsignaled(ctx, params) == RDMA_FAILURE))
+    if (params->qp_num != 0)
     {
-        log_error("Error, init multiple qps\n");
-        goto error;
+        if (unlikely(init_multiple_rc_qp_srq_unsignaled(ctx, params) == RDMA_FAILURE))
+        {
+            log_error("Error, init multiple qps\n");
+            goto error;
+        }
+
     }
+
     ctx->local_mrs = NULL;
 
     if (local_buffers)
