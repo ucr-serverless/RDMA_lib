@@ -11,11 +11,11 @@ reset_main:
 
 alias bc := build_c
 build_c:
-    cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release && cmake --build ./build
+    cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build ./build
 
 alias dg := debug
 debug:
-    cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug && cmake --build ./build
+    cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build ./build
 
 meson:
     meson setup build && ninja -C build/ -v

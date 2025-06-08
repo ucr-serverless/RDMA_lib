@@ -50,3 +50,6 @@ compile_commands.json
 MLNX_OFED_LINUX*/
 ofed.tgz
 build/
+
+*.deb
+
