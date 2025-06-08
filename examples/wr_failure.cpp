@@ -1,3 +1,4 @@
+#include <memory>
 #define _GNU_SOURCE
 #include "ib.h"
 #include "qp.h"
@@ -16,7 +17,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <cuda_runtime.h>
 #include <string>
 
 #define MR_SIZE 10240
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
         .device_idx = device_idx,
         .sgid_idx = sgid_idx,
         .qp_num = 1,
-        .remote_mr_num = 2,
+        .remote_mr_num = 1,
         .remote_mr_size = MR_SIZE,
         .max_send_wr = 100,
         .ib_port = ib_port,
@@ -92,18 +92,11 @@ int main(int argc, char *argv[])
     };
 
 
-    void **buffers = (void **)calloc(rparams.remote_mr_num, sizeof(void *));
-    assert(buffers);
-
-    void * buf;
-    cudaMalloc(&buf, rparams.remote_mr_num * rparams.remote_mr_size);
+    auto buf = std::make_unique<std::byte[]>(rparams.remote_mr_size);
+    // cudaMalloc(&buf, rparams.remote_mr_num * rparams.remote_mr_size);
     // void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
     assert(buf);
-    for (size_t i = 0; i < rparams.remote_mr_num; i++)
-    {
-        buffers[i] = buf + i * rparams.remote_mr_size;
-    }
-    init_ib_ctx(&ctx, &rparams, NULL, buffers);
+    init_ib_ctx(&ctx, &rparams, NULL, reinterpret_cast<void**>(buf.get()));
 
 #ifdef DEBUG
 
@@ -174,42 +167,49 @@ int main(int argc, char *argv[])
     if (is_server)
     {
         ret = connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid, local_res.psn, local_res.ib_port, local_res.sgid_idx);
-        printf("qp connected");
+        printf("qp connected\n");
         if (ret != RDMA_SUCCESS)
         {
-            printf("connect rc qp failure");
+            printf("connect rc qp failure\n");
         }
         // modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
-        sleep(1);
-        printf("delay send qp information");
+        printf("delay send qp information\n");
         send_ib_res(&local_res, peer_fd);
 
         ret = post_srq_recv(ctx.srq, local_res.mrs[1].addr, local_res.mrs[1].length, local_res.mrs[1].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
-            printf("post recv request failed");
+            printf("post recv request failed\n");
         }
-        // const char *test_str = "Hello, world!";
-        std::string a = "Hello, GPU";
+        const char *test_str = "Hello, world!";
 
-        cudaMemcpy(reinterpret_cast<char *>(local_res.mrs[0].addr), a.c_str(), a.size(), cudaMemcpyHostToDevice);
         // cudaMemCpy()
         // strncpy(reinterpret_cast<char *>(local_res.mrs[0].addr), test_str, MR_SIZE);
+
+        for (size_t i = 0; i < 5; i++)
+        {
+            printf("post recv request after %ld\n", i);
+            sleep(1);
+        }
 
         ret =
             post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
         struct ibv_wc wc;
         int wc_num = 0;
-        do
+        while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0))
         {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("Got send cqe!!\n");
 
-        do
+        }
+
+        printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
+
+        while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0))
         {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-        printf("Got recv cqe!!\n");
+
+        }
+
+        printf("recv ibv wc status %s\n", ibv_wc_status_str(wc.status));
         // printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
         close(self_fd);
         close(peer_fd);
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
         ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
-            printf("post recv request failed");
+            printf("post recv request failed\n");
         }
         printf("wait for incoming request\n");
 
@@ -233,10 +233,7 @@ int main(int argc, char *argv[])
         {
         } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
 
-        char buf[20];
-        cudaMemcpy(buf, reinterpret_cast<char *>(local_res.mrs[0].addr), 20, cudaMemcpyDeviceToHost);
-        printf("Got recv cqe!!\n");
-        printf("Received string from Server: %s\n", buf);
+        printf("recv ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
         // it is a good practice to post receive request after it is consumed.
         // In this example this one will not be consumed
@@ -252,7 +249,7 @@ int main(int argc, char *argv[])
         do
         {
         } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("Got send cqe!!\n");
+        printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
         close(peer_fd);
     }
@@ -262,7 +259,5 @@ int main(int argc, char *argv[])
     destroy_ib_res((&local_res));
     destroy_ib_res((&remote_res));
     destroy_ib_ctx(&ctx);
-    cudaFree(buf);
-    free(buffers);
     return 0;
 }

@@ -99,6 +99,10 @@ add_executable(ping_pong_cmplt_cnl ${CMAKE_CURRENT_SOURCE_DIR}/examples/ping_pon
 target_link_libraries(ping_pong_cmplt_cnl PRIVATE RDMA_lib)
 target_include_directories(ping_pong_cmplt_cnl PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 
+add_executable(wr_failure ${CMAKE_CURRENT_SOURCE_DIR}/examples/wr_failure.cpp)
+target_link_libraries(wr_failure PRIVATE RDMA_lib)
+target_include_directories(wr_failure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+
 # --- Check CUDA_FOUND and provide feedback ---
 # This variable now acts as your conditional indicator.
 if(CUDA_FOUND)
