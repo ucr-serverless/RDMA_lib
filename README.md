@@ -1,5 +1,12 @@
 # RDMA lib
 
+
+## install driver
+
+The DOCA host package contains the ofed driver required for development
+
+Use the `bash scripts/install_DOCA.sh` to install the DOCA host
+
 ## C library header
 
 For the C library, we can include the `RDMA_c.h` as a all in one solution.
