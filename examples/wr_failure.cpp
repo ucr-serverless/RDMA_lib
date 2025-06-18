@@ -250,6 +250,10 @@ int main(int argc, char *argv[])
         // } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
         // printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
+        for (size_t i = 0; i < 3; i++)
+        {
+            sleep(1);
+        }
         close(peer_fd);
     }
     free(server_name);
