@@ -176,6 +176,8 @@ int main(int argc, char *argv[])
         printf("delay send qp information\n");
         send_ib_res(&local_res, peer_fd);
 
+        close(self_fd);
+        close(peer_fd);
         ret = post_srq_recv(ctx.srq, local_res.mrs[1].addr, local_res.mrs[1].length, local_res.mrs[1].lkey, 0);
         if (ret != RDMA_SUCCESS)
         {
@@ -185,71 +187,67 @@ int main(int argc, char *argv[])
 
         // cudaMemCpy()
         // strncpy(reinterpret_cast<char *>(local_res.mrs[0].addr), test_str, MR_SIZE);
+        struct ibv_wc wc;
+        int wc_num = 0;
+        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 1, remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
+        while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0))
+        {
 
-        for (size_t i = 0; i < 5; i++)
+        }
+        printf("received ibv wc status %s\n", ibv_wc_status_str(wc.status));
+
+        for (size_t i = 0; i < 10; i++)
         {
             printf("post recv request after %ld\n", i);
             sleep(1);
         }
 
-        ret =
-            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 2, remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
+        // ret =
+        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
 
-        struct ibv_wc wc;
-        int wc_num = 0;
         while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0))
         {
 
         }
 
-        printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
+        printf("write ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
-        while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0))
-        {
-
-        }
-
-        printf("recv ibv wc status %s\n", ibv_wc_status_str(wc.status));
         // printf("Received string from Client: %s\n", (char *)local_res.mrs[1].addr);
-        close(self_fd);
-        close(peer_fd);
     }
     else
     {
         modify_qp_init_to_rts(ctx.qps[0], &local_res, &remote_res, remote_res.qp_nums[0]);
         printf("post share receive queue\n");
         // prepost receive request
-        ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
-        if (ret != RDMA_SUCCESS)
-        {
-            printf("post recv request failed\n");
-        }
-        printf("wait for incoming request\n");
-
-        struct ibv_wc wc;
-        int wc_num = 0;
-        // poll to get the completion event from recv_cq
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
-
-        printf("recv ibv wc status %s\n", ibv_wc_status_str(wc.status));
-
-        // it is a good practice to post receive request after it is consumed.
-        // In this example this one will not be consumed
-        ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
-        if (ret != RDMA_SUCCESS)
-        {
-            printf("post recv request failed");
-        }
-
-        ret =
-            post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
-        // poll the send_cq for the ack of send.
-        do
-        {
-        } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
-        printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
+        // ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
+        // if (ret != RDMA_SUCCESS)
+        // {
+        //     printf("post recv request failed\n");
+        // }
+        // printf("wait for incoming request\n");
+        //
+        // struct ibv_wc wc;
+        // int wc_num = 0;
+        // do
+        // {
+        // } while ((wc_num = ibv_poll_cq(ctx.recv_cq, 1, &wc) == 0));
+        //
+        // printf("recv ibv wc status %s\n", ibv_wc_status_str(wc.status));
+        //
+        // ret = post_srq_recv(ctx.srq, local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0);
+        // if (ret != RDMA_SUCCESS)
+        // {
+        //     printf("post recv request failed");
+        // }
+        //
+        // ret =
+        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        // // poll the send_cq for the ack of send.
+        // do
+        // {
+        // } while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0));
+        // printf("send ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
         close(peer_fd);
     }
