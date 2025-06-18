@@ -96,7 +96,8 @@ int main(int argc, char *argv[])
     // cudaMalloc(&buf, rparams.remote_mr_num * rparams.remote_mr_size);
     // void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
     assert(buf);
-    init_ib_ctx(&ctx, &rparams, NULL, reinterpret_cast<void**>(buf.get()));
+    void * ptr = buf.get();
+    init_ib_ctx(&ctx, &rparams, NULL, &ptr);
 
 #ifdef DEBUG
 
