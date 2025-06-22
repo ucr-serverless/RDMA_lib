@@ -3,7 +3,8 @@
 #include "RDMA_c.h"
 #include <string>
 
-struct RDMA_base {
+struct RDMA_base
+{
     struct ibv_device *device;
     struct ibv_context *context;
     struct ibv_pd *pd;
@@ -16,7 +17,7 @@ struct RDMA_base {
     uint16_t lid;
     uint8_t ib_port;
     uint32_t gid_idx;
-    RDMA_base(const std::string && device_name, uint8_t ib_port, uint32_t gid_idx);
+    RDMA_base(const std::string &&device_name, uint8_t ib_port, uint32_t gid_idx);
     RDMA_base() = delete;
     ~RDMA_base();
 };

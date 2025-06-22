@@ -103,6 +103,14 @@ add_executable(wr_failure ${CMAKE_CURRENT_SOURCE_DIR}/examples/wr_failure.cpp)
 target_link_libraries(wr_failure PRIVATE RDMA_lib)
 target_include_directories(wr_failure PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 
+add_executable(cpu_stats ${CMAKE_CURRENT_SOURCE_DIR}/examples/cpu_stats.cpp)
+target_link_libraries(cpu_stats PRIVATE RDMA_lib)
+target_include_directories(cpu_stats PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+
+add_executable(probing ${CMAKE_CURRENT_SOURCE_DIR}/examples/probing.cpp)
+target_link_libraries(probing PRIVATE RDMA_lib)
+target_include_directories(probing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+
 # --- Check CUDA_FOUND and provide feedback ---
 # This variable now acts as your conditional indicator.
 if(CUDA_FOUND)

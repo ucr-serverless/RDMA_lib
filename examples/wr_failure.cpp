@@ -1,9 +1,9 @@
 #include <memory>
 #define _GNU_SOURCE
+#include "RDMA_c.h"
 #include "ib.h"
 #include "qp.h"
 #include "rdma_config.h"
-#include "RDMA_c.h"
 #include <arpa/inet.h>
 #include <assert.h>
 #include <bits/getopt_core.h>
@@ -14,10 +14,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <string>
 
 #define MR_SIZE 10240
 
@@ -91,12 +91,11 @@ int main(int argc, char *argv[])
         .n_recv_wc = 10,
     };
 
-
     auto buf = std::make_unique<std::byte[]>(rparams.remote_mr_size);
     // cudaMalloc(&buf, rparams.remote_mr_num * rparams.remote_mr_size);
     // void *buf = (void *)calloc(rparams.remote_mr_num, rparams.remote_mr_size);
     assert(buf);
-    void * ptr = buf.get();
+    void *ptr = buf.get();
     init_ib_ctx(&ctx, &rparams, NULL, &ptr);
 
 #ifdef DEBUG
@@ -167,7 +166,8 @@ int main(int argc, char *argv[])
     int ret = 0;
     if (is_server)
     {
-        ret = connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid, local_res.psn, local_res.ib_port, local_res.sgid_idx);
+        ret = connect_rc_qp(ctx.qps[0], remote_res.qp_nums[0], remote_res.psn, remote_res.lid, remote_res.gid,
+                            local_res.psn, local_res.ib_port, local_res.sgid_idx);
         printf("qp connected\n");
         if (ret != RDMA_SUCCESS)
         {
@@ -190,10 +190,10 @@ int main(int argc, char *argv[])
         // strncpy(reinterpret_cast<char *>(local_res.mrs[0].addr), test_str, MR_SIZE);
         struct ibv_wc wc;
         int wc_num = 0;
-        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 1, remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
+        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 1,
+                                  remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
         while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0))
         {
-
         }
         printf("received ibv wc status %s\n", ibv_wc_status_str(wc.status));
 
@@ -203,13 +203,14 @@ int main(int argc, char *argv[])
             sleep(1);
         }
 
-        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 2, remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
+        ret = post_write_signaled(ctx.qps[0], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 2,
+                                  remote_res.mrs[0].addr, remote_res.mrs[0].rkey);
         // ret =
-        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
+        //     0);
 
         while ((wc_num = ibv_poll_cq(ctx.send_cq, 1, &wc) == 0))
         {
-
         }
 
         printf("write ibv wc status %s\n", ibv_wc_status_str(wc.status));
@@ -243,7 +244,8 @@ int main(int argc, char *argv[])
         // }
         //
         // ret =
-        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0, 0);
+        //     post_send_signaled(ctx.qps[0], local_res.mrs[0].addr, local_res.mrs[0].length, local_res.mrs[0].lkey, 0,
+        //     0);
         // // poll the send_cq for the ack of send.
         // do
         // {

@@ -1,11 +1,11 @@
 #include "RDMA_cpp.h"
 #include <iostream>
 
-
-
-RDMA_base::RDMA_base(const std::string && device_name, uint8_t ib_port, uint32_t gid_idx) {
+RDMA_base::RDMA_base(const std::string &&device_name, uint8_t ib_port, uint32_t gid_idx)
+{
     this->device = rdma_find_dev(device_name.c_str());
-    if (!this->device) {
+    if (!this->device)
+    {
         throw std::runtime_error("device name not valid");
     }
     this->context = ibv_open_device(this->device);
@@ -46,5 +46,4 @@ RDMA_base::~RDMA_base()
 {
     ibv_dealloc_pd(this->pd);
     ibv_close_device(this->context);
-
 }
