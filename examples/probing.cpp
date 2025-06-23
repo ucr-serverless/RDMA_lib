@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
     int ret = 0;
     if (is_server)
     {
-        CpuTimes prevTimes = getCpuTimes();
+        // CpuTimes prevTimes = getCpuTimes();
         double totalUsage = 0.0;
         struct ibv_wc wc[MAX_WC_NUM];
         long long post_duration = 0;
@@ -383,13 +383,13 @@ int main(int argc, char *argv[])
             {
                 continue;
             }
-            CpuTimes currTimes = getCpuTimes();
-            double usage = calculateCpuUsage(prevTimes, currTimes);
+            // CpuTimes currTimes = getCpuTimes();
+            // double usage = calculateCpuUsage(prevTimes, currTimes);
             // std::cout << "CPU Usage: " << usage << "%" << std::endl;
-            totalUsage += usage;
-            prevTimes = currTimes;
+            // totalUsage += usage;
+            // prevTimes = currTimes;
         }
-        std::cout << "Average CPU Usage: " << (totalUsage / n_iter * 1000) << "%" << std::endl;
+        // std::cout << "Average CPU Usage: " << (totalUsage / n_iter * 1000) << "%" << std::endl;
         std::cout << "Average post duration: " << (tt_post_duration / n_iter ) << "microseconds" << std::endl;
         std::cout << "Average probing duration: " << (tt_duration / n_iter) << "microseconds%" << std::endl;
     }
