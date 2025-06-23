@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#include <sched.h>
+#include <unistd.h>
 #include "RDMA_c.h"
 #include "ib.h"
 #include "qp.h"
@@ -89,23 +91,26 @@ int post_constructed(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ib
     return RDMA_SUCCESS;
 }
 int probing(const int n_hosts, const int n_qp, struct ib_ctx &ctx, const struct ib_res &local_res,
-            const struct ib_res *host_ptr, struct ibv_wc *wc)
+            const struct ib_res *host_ptr, struct ibv_wc *wc, struct ibv_send_wr* wr, size_t wr_id, long long &post_duration)
 {
     int ret = 0;
     int tt_wc_num = 0;
     int wc_num = 0;
     auto start = std::chrono::high_resolution_clock::now();
+    struct ibv_send_wr *bad_send_wr;
     for (size_t i = 0; i < n_hosts; i++)
     {
+        wr[i].wr_id = wr_id;
         for (size_t j = 0; j < n_qp; j++)
         {
-            ret = post_write_signaled(ctx.qps[i * n_qp + j], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 1,
-                                      host_ptr[i].mrs[0].addr, host_ptr[i].mrs[0].rkey);
+            ret = ibv_post_send(ctx.qps[i * n_qp + j], &wr[i], &bad_send_wr);
+            // ret = post_write_signaled(ctx.qps[i * n_qp + j], local_res.mrs[0].addr, 0, local_res.mrs[0].lkey, 1,
+            //                           host_ptr[i].mrs[0].addr, host_ptr[i].mrs[0].rkey);
         }
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Time spent in post write: " << duration.count() << " microseconds" << std::endl;
+    post_duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    // std::cout << "Time spent in post write: " << duration.count() << " microseconds" << std::endl;
     while (tt_wc_num < n_hosts * n_qp)
     {
         wc_num = ibv_poll_cq(ctx.send_cq, MAX_WC_NUM, wc);
@@ -117,6 +122,19 @@ int probing(const int n_hosts, const int n_qp, struct ib_ctx &ctx, const struct 
 
 int main(int argc, char *argv[])
 {
+    pid_t pid = getpid(); // Get current process ID
+    cpu_set_t cpuset;     // CPU set structure
+
+    CPU_ZERO(&cpuset);    // Clear the set
+    CPU_SET(0, &cpuset);  // Add CPU 0 to the set
+
+    // Set affinity
+    if (sched_setaffinity(pid, sizeof(cpuset), &cpuset) == -1) {
+        perror("sched_setaffinity");
+        return 1;
+    }
+
+    std::cout << "Successfully set CPU affinity to CPU 0 for process " << pid << std::endl;
     struct ib_ctx ctx;
 
     static struct option long_options[] = {{"server_ip", required_argument, NULL, 'H'},
@@ -240,11 +258,14 @@ int main(int argc, char *argv[])
     // on host
     auto host_ptr = std::make_unique<struct ib_res[]>(n_hosts);
     auto host_fd = std::make_unique<int[]>(n_hosts);
+    auto host_wr = std::make_unique<struct ibv_send_wr[]>(n_hosts);
     // on client
     size_t client_id = 0;
     struct ib_res remote_res;
     struct ib_res local_res;
     init_local_ib_res(&ctx, &local_res);
+    // for server
+    struct ibv_sge list = {.addr = (uintptr_t)local_res.mrs[0].addr, .length = 0, .lkey = local_res.mrs[0].lkey};
     if (is_server)
     {
 
@@ -273,6 +294,18 @@ int main(int argc, char *argv[])
                     printf("connect rc qp failure\n");
                 }
             }
+
+
+            host_wr[current_host] = {
+                .wr_id = 0,
+                .sg_list = &list,
+                .num_sge = 1,
+                .opcode = IBV_WR_RDMA_WRITE,
+                .send_flags = IBV_SEND_SIGNALED,
+                // .wr.rdma = {.remote_addr = raddr, .rkey = rkey};
+                // .wr.rdma.rkey = rkey,
+            };
+            host_wr[current_host].wr.rdma = {.remote_addr = host_ptr[current_host].mrs[0].addr, .rkey = host_ptr[current_host].mrs[0].rkey};
             current_host++;
         }
     }
@@ -334,13 +367,17 @@ int main(int argc, char *argv[])
         CpuTimes prevTimes = getCpuTimes();
         double totalUsage = 0.0;
         struct ibv_wc wc[MAX_WC_NUM];
+        long long post_duration = 0;
+        long long tt_post_duration = 0;
+        long long tt_duration = 0;
         for (size_t i = 0; i < n_iter; i++)
         {
             auto start = std::chrono::high_resolution_clock::now();
-            probing(n_hosts, n_qp, ctx, local_res, host_ptr.get(), wc);
+            probing(n_hosts, n_qp, ctx, local_res, host_ptr.get(), wc, host_wr.get(), i, post_duration);
             auto end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            std::cout << "Time spent in function: " << duration.count() << " microseconds" << std::endl;
+            tt_duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            tt_post_duration += post_duration;
+            // std::cout << "Time spent in function: " << duration.count() << " microseconds" << std::endl;
             std::this_thread::sleep_for(std::chrono::microseconds(n_interval));
             if (i % 1000)
             {
@@ -348,11 +385,13 @@ int main(int argc, char *argv[])
             }
             CpuTimes currTimes = getCpuTimes();
             double usage = calculateCpuUsage(prevTimes, currTimes);
-            std::cout << "CPU Usage: " << usage << "%" << std::endl;
+            // std::cout << "CPU Usage: " << usage << "%" << std::endl;
             totalUsage += usage;
             prevTimes = currTimes;
         }
         std::cout << "Average CPU Usage: " << (totalUsage / n_iter * 1000) << "%" << std::endl;
+        std::cout << "Average post duration: " << (tt_post_duration / n_iter ) << "microseconds" << std::endl;
+        std::cout << "Average probing duration: " << (tt_duration / n_iter) << "microseconds%" << std::endl;
     }
     else
     {

@@ -229,3 +229,5 @@ On the host side
 
 `-q` is the number of qp per host, `-t` is the numbers of iteration, `-l` is the sleep between iterations.
 `-o` is the number of host
+
+use `pidstat 1 -p $(pgrep probing)` to monitor the CPU usage of server
