@@ -214,4 +214,18 @@ The OFED driver is installed as a package in the DOCA host package.
 
 Follow the link of [DOCA host installation][https://developer.nvidia.com/doca-downloads]
 
+### probing example
 
+On the server side use
+
+```bash
+./build/probing -p 10001 -i 1 -x 3 -d 2 -L 10.10.1.1 -q 100 -t 100 -l 100 -o 1
+```
+
+On the host side
+```bash
+./build/probing -p 10001 -i 1 -x 3 -d 2 -H 10.10.1.1 -q 100
+```
+
+`-q` is the number of qp per host, `-t` is the numbers of iteration, `-l` is the sleep between iterations.
+`-o` is the number of host

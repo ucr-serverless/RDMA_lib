@@ -62,12 +62,39 @@ double calculateCpuUsage(const CpuTimes &prev, const CpuTimes &curr)
     return (totald - idled) * 100.0 / totald;
 }
 
+int post_constructed(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *qp, uint64_t buf, uint64_t raddr,
+               uint32_t rkey, int send_flag)
+{
+    int ret = 0;
+    struct ibv_send_wr *bad_send_wr;
+
+    struct ibv_sge list = {.addr = (uintptr_t)buf, .length = req_size, .lkey = lkey};
+
+    struct ibv_send_wr send_wr = {
+        .wr_id = wr_id,
+        .sg_list = &list,
+        .num_sge = 1,
+        .opcode = IBV_WR_RDMA_WRITE,
+        .send_flags = send_flag,
+        // .wr.rdma = {.remote_addr = raddr, .rkey = rkey};
+        // .wr.rdma.rkey = rkey,
+    };
+    send_wr.wr.rdma = {.remote_addr = raddr, .rkey = rkey};
+
+    ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
+    if (ret != 0)
+    {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
 int probing(const int n_hosts, const int n_qp, struct ib_ctx &ctx, const struct ib_res &local_res,
             const struct ib_res *host_ptr, struct ibv_wc *wc)
 {
     int ret = 0;
     int tt_wc_num = 0;
     int wc_num = 0;
+    auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < n_hosts; i++)
     {
         for (size_t j = 0; j < n_qp; j++)
@@ -76,12 +103,16 @@ int probing(const int n_hosts, const int n_qp, struct ib_ctx &ctx, const struct 
                                       host_ptr[i].mrs[0].addr, host_ptr[i].mrs[0].rkey);
         }
     }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "Time spent in post write: " << duration.count() << " microseconds" << std::endl;
     while (tt_wc_num < n_hosts * n_qp)
     {
         wc_num = ibv_poll_cq(ctx.send_cq, MAX_WC_NUM, wc);
-        assert(wc_num);
+        assert(wc_num >= 0);
         tt_wc_num += wc_num;
     }
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -230,7 +261,6 @@ int main(int argc, char *argv[])
             recv_ib_res(&host_ptr[current_host], peer_fd);
             struct ib_res &client_res = host_ptr[current_host];
             send_ib_res(&local_res, peer_fd);
-            current_host++;
             std::cout << "received: " << current_host << std::endl;
             int ret;
             for (size_t i = 0; i < n_qp; i++)
@@ -243,6 +273,7 @@ int main(int argc, char *argv[])
                     printf("connect rc qp failure\n");
                 }
             }
+            current_host++;
         }
     }
     else
@@ -311,13 +342,17 @@ int main(int argc, char *argv[])
             auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
             std::cout << "Time spent in function: " << duration.count() << " microseconds" << std::endl;
             std::this_thread::sleep_for(std::chrono::microseconds(n_interval));
+            if (i % 1000)
+            {
+                continue;
+            }
             CpuTimes currTimes = getCpuTimes();
             double usage = calculateCpuUsage(prevTimes, currTimes);
             std::cout << "CPU Usage: " << usage << "%" << std::endl;
             totalUsage += usage;
             prevTimes = currTimes;
         }
-        std::cout << "Average CPU Usage: " << (totalUsage / n_iter) << "%" << std::endl;
+        std::cout << "Average CPU Usage: " << (totalUsage / n_iter * 1000) << "%" << std::endl;
     }
     else
     {

@@ -54,3 +54,4 @@ build/
 *.deb
 
 core.*
+.gdb_history
