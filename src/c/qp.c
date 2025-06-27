@@ -266,6 +266,28 @@ int modify_qp_init_to_rtr_qp_num(struct ibv_qp *qp, struct ib_res *local_res, st
                                          local_res->ib_port, local_res->sgid_idx);
 }
 
+int modify_qp_rtr_to_rts_with_timeout(struct ibv_qp *qp, uint32_t l_psn, uint8_t retry_cnt, uint8_t timeout)
+{
+    int ret = 0;
+    struct ibv_qp_attr qp_attr = {
+        .qp_state = IBV_QPS_RTS,
+        .timeout = timeout,
+        .retry_cnt = retry_cnt,
+        .rnr_retry = 7,
+        .sq_psn = l_psn,
+        .max_rd_atomic = 1,
+    };
+
+    ret = ibv_modify_qp(qp, &qp_attr,
+                        IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_SQ_PSN |
+                            IBV_QP_MAX_QP_RD_ATOMIC);
+    if (unlikely(ret != 0))
+    {
+        log_error("Failed to change qp to rts");
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+}
 int modify_qp_rtr_to_rts_verbose(struct ibv_qp *qp, uint32_t l_psn)
 {
     int ret = 0;
@@ -364,6 +386,30 @@ int connect_rc_qp(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, uint16_t
         return RDMA_FAILURE;
     }
     ret = modify_qp_rtr_to_rts_verbose(qp, l_psn);
+    if (ret != RDMA_SUCCESS) 
+    {
+        return RDMA_FAILURE;
+    }
+    return RDMA_SUCCESS;
+
+}
+
+int connect_rc_qp_with_timeout(struct ibv_qp *qp, uint32_t r_qp_num, uint32_t r_psn, uint16_t r_lid,
+                                  union ibv_gid r_gid, uint32_t l_psn, uint8_t l_ib_port, uint8_t l_gid_idx, uint8_t retry, uint8_t n_timeout)
+{
+    int ret;
+    ret = modify_qp_init_verbose(qp, l_ib_port);
+    if (ret != RDMA_SUCCESS) 
+    {
+        return RDMA_FAILURE;
+    }
+    ret = modify_qp_init_to_rtr_verbose(qp, r_qp_num, r_psn, r_lid, r_gid,
+                                         l_ib_port, l_gid_idx);
+    if (ret != RDMA_SUCCESS) 
+    {
+        return RDMA_FAILURE;
+    }
+    ret = modify_qp_rtr_to_rts_with_timeout(qp, l_psn, retry, n_timeout);
     if (ret != RDMA_SUCCESS) 
     {
         return RDMA_FAILURE;
