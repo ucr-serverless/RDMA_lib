@@ -222,7 +222,7 @@ On the server side use
 ./build/probing -p 10001 -i 1 -x 3 -d 2 -L 10.10.1.1 -q 100 -t 100 -l 100 -o 1
 ```
 
-On the host side
+On the client side
 ```bash
 ./build/probing -p 10001 -i 1 -x 3 -d 2 -H 10.10.1.1 -q 100
 ```
