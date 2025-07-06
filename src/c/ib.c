@@ -217,8 +217,11 @@ int init_ib_ctx(struct ib_ctx *ctx, struct rdma_param *params, void **local_buff
             log_error("Error, register remote mrs\n");
             goto error;
         }
-
         ctx->remote_mrs_num = params->remote_mr_num;
+    }
+    else
+    {
+        ctx->remote_mrs_num = 0;
     }
 
     ctx->send_wc = (struct ibv_wc *)calloc(params->n_send_wc, sizeof(struct ibv_wc));
