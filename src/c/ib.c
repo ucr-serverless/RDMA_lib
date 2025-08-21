@@ -660,6 +660,7 @@ int post_write(uint32_t req_size, uint32_t lkey, uint64_t wr_id, struct ibv_qp *
     ret = ibv_post_send(qp, &send_wr, &bad_send_wr);
     if (ret != 0)
     {
+        log_error("post write error: %d\n", ret);
         return RDMA_FAILURE;
     }
     return RDMA_SUCCESS;

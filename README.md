@@ -231,3 +231,7 @@ On the client side
 `-o` is the number of host
 
 use `pidstat 1 -p $(pgrep probing)` to monitor the CPU usage of server
+
+## trouble shooting
+
+If post request on the unconnected QP, there would be error code 12
