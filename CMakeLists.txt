@@ -111,6 +111,19 @@ add_executable(probing ${CMAKE_CURRENT_SOURCE_DIR}/examples/probing.cpp)
 target_link_libraries(probing PRIVATE RDMA_lib)
 target_include_directories(probing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 
+add_executable(rdma-bench
+    ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench_cfg.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/perf/client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/perf/server.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/perf/setup_ib.c
+)
+target_link_libraries(rdma-bench PRIVATE RDMA_lib)
+target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/perf/)
+target_compile_options(rdma-bench PRIVATE -Wno-int-conversion)
+target_compile_options(rdma-bench PRIVATE -Wno-unused-variable)
+
 # --- Check CUDA_FOUND and provide feedback ---
 # This variable now acts as your conditional indicator.
 if(CUDA_FOUND)
@@ -137,13 +150,6 @@ endif()
 #   )
 # endfunction()
 #
-# add_rdma_executable(rdma-bench
-#   perf/rdma-bench.c
-#   perf/rdma-bench_cfg.c
-#   perf/client.c
-#   perf/server.c
-#   perf/setup_ib.c
-# )
 #
 # add_rdma_executable(rc_connection
 #   examples/rc_connection.c
