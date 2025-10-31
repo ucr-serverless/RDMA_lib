@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     char *local_ip = nullptr;
     char *usage = nullptr;
     int ib_port = 0;
-    int device_idx = 0;
+    std::string device_idx;
     int sgid_idx = 0;
 
     char *port = NULL;
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
             ib_port = atoi(optarg);
             break;
         case 'd':
-            device_idx = atoi(optarg);
+            device_idx = optarg;
             break;
         case 'x':
             sgid_idx = atoi(optarg);
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     // on xl170, the device_idx should be 3, on c6525-25g, the device_idx should be 2.
 
     struct rdma_param rparams = {
-        .device_idx = device_idx,
+        .device_str = device_idx.c_str(),
         .sgid_idx = sgid_idx,
         .qp_num = 1,
         .remote_mr_num = 2,

@@ -23,6 +23,17 @@ This library provides two interfaces, one is for c named `libRDMA_lib` and the o
 
 *The Cmake would compile both*
 
+If ccache is installed, compile with
+```bash
+cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && cmake --build ./build
+```
+
+If ccache is not installed, compile with
+
+```bash
+cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Release -G Ninja && cmake --build ./build
+```
+
 
 ## integrate with other code base
 
@@ -150,6 +161,15 @@ Actually, they are interchangeable to each other. For example:
 # client
 ./build/ping_pong -p 10001  -i 1 -x 3 -d 2 -H 10.10.1.1
 ```
+
+### ping_pong_gpu
+
+```bash
+./build/ping_pong_gpu -p 10001  -i 1 -x 3 -d mlx5_0 -L 10.10.1.1
+# client
+./build/ping_pong_gpu -p 10001  -i 1 -x 3 -d mlx5_0 -H 10.10.1.1
+```
+
 
 ### rdma-bench
 

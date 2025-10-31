@@ -23,7 +23,7 @@ find_package(PkgConfig REQUIRED)
 #     message(STATUS "install with sudo apt-get install libgoogle-glog-dev")
 # endif()
 
-pkg_check_modules(LIBCONFIG REQUIRED libconfig)
+# pkg_check_modules(LIBCONFIG REQUIRED libconfig)
 pkg_check_modules(IBVERBS REQUIRED libibverbs)
 # pkg_check_modules(DPDK libdpdk) # Optional
 
@@ -41,8 +41,8 @@ set(RDMA_C_SRC
 )
 
 add_library(RDMA_lib STATIC ${RDMA_C_SRC})
-target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES} ${LIBCONFIG_LIBRARIES})
-target_include_directories(RDMA_lib PRIVATE ${LIBCONFIG_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+target_link_libraries(RDMA_lib PUBLIC ${IBVERBS_LIBRARIES})
+target_include_directories(RDMA_lib PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 target_include_directories(RDMA_lib PUBLIC ${IBVERBS_LIBRARY_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/include/c)
 
 set_target_properties(RDMA_lib PROPERTIES OUTPUT_NAME "RDMA_lib")
@@ -111,18 +111,45 @@ add_executable(probing ${CMAKE_CURRENT_SOURCE_DIR}/examples/probing.cpp)
 target_link_libraries(probing PRIVATE RDMA_lib)
 target_include_directories(probing PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
 
-add_executable(rdma-bench
-    ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench_cfg.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/perf/client.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/perf/server.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/perf/setup_ib.c
-)
-target_link_libraries(rdma-bench PRIVATE RDMA_lib)
-target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
-target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/perf/)
-target_compile_options(rdma-bench PRIVATE -Wno-int-conversion)
-target_compile_options(rdma-bench PRIVATE -Wno-unused-variable)
+# Check for libconfig
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+    pkg_check_modules(LIBCONFIG libconfig)
+endif()
+
+# Only build rdma-bench if libconfig is available
+if(LIBCONFIG_FOUND)
+    add_executable(rdma-bench
+        ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench_cfg.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/perf/client.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/perf/server.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/perf/setup_ib.c
+    )
+    
+    target_link_libraries(rdma-bench PRIVATE RDMA_lib ${LIBCONFIG_LIBRARIES})
+    target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+    target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/perf/)
+    target_include_directories(rdma-bench PRIVATE ${LIBCONFIG_INCLUDE_DIRS})
+    target_compile_options(rdma-bench PRIVATE -Wno-int-conversion)
+    target_compile_options(rdma-bench PRIVATE -Wno-unused-variable)
+    
+    message(STATUS "libconfig found - building rdma-bench")
+else()
+    message(STATUS "libconfig not found - skipping rdma-bench")
+endif()
+# add_executable(rdma-bench
+#     ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench.c
+#     ${CMAKE_CURRENT_SOURCE_DIR}/perf/rdma-bench_cfg.c
+#     ${CMAKE_CURRENT_SOURCE_DIR}/perf/client.c
+#     ${CMAKE_CURRENT_SOURCE_DIR}/perf/server.c
+#     ${CMAKE_CURRENT_SOURCE_DIR}/perf/setup_ib.c
+# )
+# target_link_libraries(rdma-bench PRIVATE RDMA_lib)
+# target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/utils/)
+# target_include_directories(rdma-bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/perf/)
+# target_compile_options(rdma-bench PRIVATE -Wno-int-conversion)
+# target_compile_options(rdma-bench PRIVATE -Wno-unused-variable)
 
 # --- Check CUDA_FOUND and provide feedback ---
 # This variable now acts as your conditional indicator.
